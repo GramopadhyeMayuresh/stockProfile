@@ -24,7 +24,8 @@ class AngelOneAdapter:
                 data = json.loads(stored)
                 self.client_id = data.get("client_id")
                 self.api_key = data.get("api_key")
-                self.jwt_token = data.get("jwt_token")
+                raw_jwt = data.get("jwt_token") or ""
+                self.jwt_token = raw_jwt.replace("Bearer ", "").strip() if raw_jwt else None
                 self.feed_token = data.get("feed_token")
                 if self.api_key:
                     self.smart_api = SmartConnect(api_key=self.api_key)
@@ -34,9 +35,10 @@ class AngelOneAdapter:
             print(f"[AngelOneAdapter] Error loading keyring credentials: {e}")
 
     def save_credentials(self, client_id: str, api_key: str, password_pin: str, totp_secret: str, jwt_token: Optional[str] = None, feed_token: Optional[str] = None):
+        clean_jwt = jwt_token.replace("Bearer ", "").strip() if jwt_token else None
         self.client_id = client_id
         self.api_key = api_key
-        self.jwt_token = jwt_token
+        self.jwt_token = clean_jwt
         self.feed_token = feed_token
         try:
             keyring.set_password(KEYRING_SERVICE, "credentials", json.dumps({
@@ -44,7 +46,7 @@ class AngelOneAdapter:
                 "api_key": api_key,
                 "password_pin": password_pin,
                 "totp_secret": totp_secret,
-                "jwt_token": jwt_token,
+                "jwt_token": clean_jwt,
                 "feed_token": feed_token
             }))
         except Exception as e:
@@ -68,12 +70,15 @@ class AngelOneAdapter:
 
             if login_data.get("status"):
                 data = login_data.get("data", {})
-                self.jwt_token = data.get("jwtToken")
+                raw_jwt = data.get("jwtToken", "")
+                clean_jwt = raw_jwt.replace("Bearer ", "").strip()
+                self.jwt_token = clean_jwt
                 self.feed_token = data.get("feedToken")
                 self.smart_api = smart_api
+                self.smart_api.setAccessToken(clean_jwt)
                 self.client_id = clean_client_id
                 self.api_key = clean_api_key
-                self.save_credentials(clean_client_id, clean_api_key, clean_pin, clean_secret, self.jwt_token, self.feed_token)
+                self.save_credentials(clean_client_id, clean_api_key, clean_pin, clean_secret, clean_jwt, self.feed_token)
                 return {"status": True, "message": "Login successful", "data": data}
             else:
                 return {"status": False, "message": login_data.get("message", "Login failed")}
@@ -102,38 +107,48 @@ class AngelOneAdapter:
 
     def fetch_holdings(self, use_mock: bool = False) -> List[Dict[str, Any]]:
         """
-        Fetch equity holdings via smartApi.getHolding() or return mock data.
+        Fetch equity holdings via smartApi.holding() or return mock data.
         """
         if not use_mock and self.smart_api and self.jwt_token:
             try:
-                res = self.smart_api.getHolding()
-                if res.get("status") and res.get("data"):
-                    raw_data = res["data"]
-                    normalized = []
-                    for h in raw_data:
-                        qty = int(h.get("quantity", 0))
-                        if qty <= 0:
-                            continue
-                        last_price = float(h.get("ltp", 0.0))
-                        close_price = float(h.get("close", last_price))
-                        day_change = last_price - close_price
-                        day_pct = (day_change / close_price * 100.0) if close_price > 0 else 0.0
-                        avg_price = float(h.get("averageprice", 0.0))
-                        invested = qty * avg_price
-                        pnl = float(h.get("profitandloss", (qty * last_price) - invested))
+                res = self.smart_api.holding()
+                # If token expired or invalid, auto-refresh silently via TOTP
+                if not res or not res.get("status"):
+                    print("[AngelOneAdapter] Session expired or invalid, auto-refreshing via TOTP...")
+                    if self.auto_refresh_token():
+                        res = self.smart_api.holding()
 
-                        normalized.append({
-                            "tradingsymbol": h.get("tradingsymbol", ""),
-                            "isin": h.get("isin", ""),
-                            "exchange": h.get("exchange", "NSE"),
-                            "quantity": qty,
-                            "average_price": avg_price,
-                            "last_price": last_price,
-                            "pnl": pnl,
-                            "day_change": round(day_change, 2),
-                            "day_change_percent": round(day_pct, 2),
-                        })
-                    return normalized
+                if res and res.get("status") and res.get("data") is not None:
+                    raw_data = res["data"]
+                    if isinstance(raw_data, dict):
+                        raw_data = raw_data.get("holdings", [])
+                    if isinstance(raw_data, list):
+                        normalized = []
+                        for h in raw_data:
+                            qty = int(h.get("quantity", 0)) + int(h.get("t1quantity", 0))
+                            if qty <= 0:
+                                continue
+                            last_price = float(h.get("ltp", 0.0))
+                            close_price = float(h.get("close", last_price))
+                            day_change = last_price - close_price
+                            day_pct = (day_change / close_price * 100.0) if close_price > 0 else 0.0
+                            avg_price = float(h.get("averageprice", 0.0))
+                            invested = qty * avg_price
+                            pnl = float(h.get("profitandloss", (qty * last_price) - invested))
+                            symbol = h.get("tradingsymbol", "").replace("-EQ", "").strip().upper()
+
+                            normalized.append({
+                                "tradingsymbol": symbol,
+                                "isin": h.get("isin", ""),
+                                "exchange": h.get("exchange", "NSE"),
+                                "quantity": qty,
+                                "average_price": avg_price,
+                                "last_price": last_price,
+                                "pnl": pnl,
+                                "day_change": round(day_change, 2),
+                                "day_change_percent": round(day_pct, 2),
+                            })
+                        return normalized
             except Exception as e:
                 print(f"[AngelOneAdapter] Live holdings fetch failed ({e}). Falling back.")
 
