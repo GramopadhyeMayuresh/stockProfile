@@ -12,6 +12,10 @@ node_modules
 dist
 dist-ssr
 *.local
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
 backend/.venv
 backend/*.db
 .backend.pid
