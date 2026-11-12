@@ -330,3 +330,4 @@ async def calculate_portfolio_dividends(
         upcoming_events=upcoming_events[:10],
         last_updated=datetime.now().isoformat(),
     )
+
