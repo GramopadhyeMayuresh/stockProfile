@@ -161,12 +161,14 @@ export function App() {
     setAlerts((prev) => prev.filter((a) => a.id !== id));
   };
 
-  const handleToggleAlert = async (id: number, currentStatus: string) => {
-    const nextStatus = currentStatus === "ACTIVE" ? "DISABLED" : "ACTIVE";
-    await toggleAlertStatus(id, nextStatus as any);
-    setAlerts((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, status: nextStatus as any } : a))
-    );
+  const handleToggleAlert = async (id: number, targetStatus: "ACTIVE" | "DISABLED") => {
+    try {
+      await toggleAlertStatus(id, targetStatus);
+      const updated = await fetchAlerts();
+      setAlerts(updated);
+    } catch (err) {
+      console.error("Failed to toggle alert:", err);
+    }
   };
 
   const handleTestTrigger = async (id: number) => {

@@ -241,6 +241,12 @@ async def update_alert_status(alert_id: int, status: str, last_price: Optional[f
                 SET status = ?, triggered_at = ?, last_checked_price = ?
                 WHERE id = ?
             """, (status, now, last_price, alert_id))
+        elif status == "ACTIVE":
+            await db.execute("""
+                UPDATE alerts
+                SET status = ?, triggered_at = NULL, last_checked_price = COALESCE(?, last_checked_price)
+                WHERE id = ?
+            """, (status, last_price, alert_id))
         else:
             await db.execute("""
                 UPDATE alerts

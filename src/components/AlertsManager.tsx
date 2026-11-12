@@ -14,7 +14,7 @@ interface AlertsManagerProps {
   alerts: Alert[];
   onCreateAlert: (alert: AlertCreate) => Promise<void>;
   onDeleteAlert: (id: number) => Promise<void>;
-  onToggleAlert: (id: number, currentStatus: string) => Promise<void>;
+  onToggleAlert: (id: number, targetStatus: "ACTIVE" | "DISABLED") => Promise<void>;
   onTestTrigger: (id: number) => Promise<void>;
 }
 
@@ -258,6 +258,17 @@ export const AlertsManager: React.FC<AlertsManagerProps> = ({
                         <span className="font-bold text-sm text-white">
                           {alert.tradingsymbol}
                         </span>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            alert.status === "ACTIVE"
+                              ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                              : alert.status === "TRIGGERED"
+                              ? "bg-amber-500/15 text-amber-400 border border-amber-500/30"
+                              : "bg-slate-800 text-slate-400 border border-slate-700"
+                          }`}
+                        >
+                          {alert.status === "ACTIVE" ? "Active" : alert.status === "TRIGGERED" ? "Triggered" : "Paused"}
+                        </span>
                         <span className="px-2 py-0.5 rounded-md bg-slate-800 text-[10px] font-semibold text-indigo-400 border border-slate-700">
                           {alert.condition_type.replace("_", " ")}
                         </span>
@@ -302,14 +313,23 @@ export const AlertsManager: React.FC<AlertsManagerProps> = ({
                           alert.status === "ACTIVE" ? "DISABLED" : "ACTIVE"
                         )
                       }
-                      title={isDisabled ? "Enable alert" : "Pause alert"}
-                      className={`p-1.5 rounded-lg border text-xs transition-colors ${
-                        isDisabled
-                          ? "bg-slate-800 text-slate-500 border-slate-700 hover:text-white"
-                          : "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20"
+                      title={alert.status === "ACTIVE" ? "Pause alert" : "Enable alert"}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
+                        alert.status === "ACTIVE"
+                          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20"
+                          : alert.status === "TRIGGERED"
+                          ? "bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20"
+                          : "bg-slate-800 text-slate-400 border-slate-700 hover:text-white hover:border-slate-600"
                       }`}
                     >
                       <Power className="w-3.5 h-3.5" />
+                      <span>
+                        {alert.status === "ACTIVE"
+                          ? "Active"
+                          : alert.status === "TRIGGERED"
+                          ? "Re-arm"
+                          : "Enable"}
+                      </span>
                     </button>
 
                     {/* Delete */}
