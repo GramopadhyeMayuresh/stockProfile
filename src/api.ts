@@ -2,7 +2,7 @@ import { AggregatedHolding, SectorAllocation, PortfolioSummary, Alert, AlertCrea
 
 const API_BASE = "http://127.0.0.1:8765/api";
 
-async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout = 6000): Promise<Response> {
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout = 15000): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
   try {
@@ -32,7 +32,7 @@ export async function fetchSectors(): Promise<SectorAllocation[]> {
 }
 
 export async function syncPortfolios(): Promise<{ status: string; zerodha_count: number; angelone_count: number }> {
-  const res = await fetchWithTimeout(`${API_BASE}/portfolio/sync`, { method: "POST" });
+  const res = await fetchWithTimeout(`${API_BASE}/portfolio/sync`, { method: "POST" }, 30000);
   if (!res.ok) throw new Error("Failed to sync portfolios");
   return res.json();
 }
@@ -73,11 +73,15 @@ export async function saveZerodhaCredentials(apiKey: string, apiSecret: string, 
 }
 
 export async function loginAngelOne(clientId: string, passwordPin: string, apiKey: string, totpSecret: string) {
-  const res = await fetchWithTimeout(`${API_BASE}/brokers/angelone/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ client_id: clientId, password_pin: passwordPin, api_key: apiKey, totp_secret: totpSecret }),
-  });
+  const res = await fetchWithTimeout(
+    `${API_BASE}/brokers/angelone/login`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ client_id: clientId, password_pin: passwordPin, api_key: apiKey, totp_secret: totpSecret }),
+    },
+    30000
+  );
   if (!res.ok) {
     const err = await res.json();
     throw new Error(err.detail || "Failed to login to Angel One");
