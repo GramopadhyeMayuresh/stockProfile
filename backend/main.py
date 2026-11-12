@@ -9,7 +9,7 @@ import yfinance as yf
 from .database import (
     init_db, get_all_holdings, upsert_holdings, get_broker_accounts,
     update_broker_status, get_all_alerts, create_alert, update_alert_status,
-    delete_alert, set_sector_override
+    delete_alert, set_sector_override, toggle_broker_active
 )
 from .models import (
     PortfolioSummary, AggregatedHolding, SectorAllocation, Alert,
@@ -103,17 +103,34 @@ async def get_sectors():
 @app.post("/api/portfolio/sync")
 async def sync_portfolio():
     """
-    Fetch updated holdings from both brokers (or mock data if not logged in).
+    Fetch updated holdings from enabled brokers (or mock data if not logged in).
     """
-    z_holdings = zerodha.fetch_holdings()
-    a_holdings = angelone.fetch_holdings()
+    brokers = await get_broker_accounts()
+    z_count = 0
+    a_count = 0
 
-    await upsert_holdings("zerodha", z_holdings)
-    await upsert_holdings("angelone", a_holdings)
+    if brokers.get("zerodha", {}).get("is_active", True):
+        z_holdings = zerodha.fetch_holdings()
+        await upsert_holdings("zerodha", z_holdings)
+        z_count = len(z_holdings)
+
+    if brokers.get("angelone", {}).get("is_active", True):
+        a_holdings = angelone.fetch_holdings()
+        await upsert_holdings("angelone", a_holdings)
+        a_count = len(a_holdings)
 
     # Broadcast sync event
     await alert_daemon.broadcast_event("sync_completed", {"status": "success"})
-    return {"status": "success", "zerodha_count": len(z_holdings), "angelone_count": len(a_holdings)}
+    return {"status": "success", "zerodha_count": z_count, "angelone_count": a_count}
+
+
+@app.post("/api/brokers/{broker_id}/toggle")
+async def toggle_broker(broker_id: str, is_active: bool = True):
+    if broker_id not in ["zerodha", "angelone"]:
+        raise HTTPException(status_code=400, detail="Invalid broker ID")
+    await toggle_broker_active(broker_id, is_active)
+    await alert_daemon.broadcast_event("sync_completed", {"status": "success"})
+    return {"status": "success", "broker": broker_id, "is_active": is_active}
 
 
 @app.post("/api/portfolio/seed-demo")

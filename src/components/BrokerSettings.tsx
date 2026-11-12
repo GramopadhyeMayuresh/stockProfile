@@ -5,6 +5,7 @@ import {
   loginAngelOne,
   getZerodhaAuthUrl,
   seedDemoPortfolio,
+  toggleBrokerActive,
 } from "../api";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
@@ -41,6 +42,19 @@ export const BrokerSettings: React.FC<BrokerSettingsProps> = ({
   const [aTotpSecret, setATotpSecret] = useState("");
   const [aLoading, setALoading] = useState(false);
   const [aMsg, setAMsg] = useState<string | null>(null);
+  const [togglingBroker, setTogglingBroker] = useState<string | null>(null);
+
+  const handleToggleBroker = async (brokerId: string, currentActive: boolean) => {
+    setTogglingBroker(brokerId);
+    try {
+      await toggleBrokerActive(brokerId, !currentActive);
+      onRefresh();
+    } catch (err: any) {
+      console.error(`Error toggling ${brokerId}:`, err);
+    } finally {
+      setTogglingBroker(null);
+    }
+  };
 
   const handleZerodhaSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,7 +119,10 @@ export const BrokerSettings: React.FC<BrokerSettingsProps> = ({
   };
 
   const zerodhaStatus = brokers["zerodha"]?.is_connected;
+  const zerodhaActive = brokers["zerodha"]?.is_active ?? true;
+
   const angelStatus = brokers["angelone"]?.is_connected;
+  const angelActive = brokers["angelone"]?.is_active ?? true;
 
   return (
     <div className="space-y-6">
@@ -126,7 +143,11 @@ export const BrokerSettings: React.FC<BrokerSettingsProps> = ({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 1. Zerodha (Kite Connect) Settings */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
+        <div className={`border rounded-2xl p-6 shadow-xl flex flex-col justify-between transition-all ${
+          zerodhaActive
+            ? "bg-slate-900/90 border-slate-800"
+            : "bg-slate-900/50 border-slate-800/60 opacity-80"
+        }`}>
           <div>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2.5">
@@ -139,18 +160,46 @@ export const BrokerSettings: React.FC<BrokerSettingsProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleToggleBroker("zerodha", zerodhaActive)}
+                  disabled={togglingBroker === "zerodha"}
+                  title={zerodhaActive ? "Click to pause tracking Zerodha" : "Click to enable tracking Zerodha"}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all ${
+                    zerodhaActive
+                      ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20"
+                      : "bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700 hover:text-slate-200"
+                  }`}
+                >
+                  <span className={`w-2 h-2 rounded-full ${zerodhaActive ? "bg-emerald-400" : "bg-slate-500"}`} />
+                  <span>{zerodhaActive ? "Tracking: Active" : "Tracking: Paused"}</span>
+                </button>
+
                 {zerodhaStatus ? (
-                  <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                  <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-full border border-emerald-500/20">
                     <CheckCircle2 className="w-3.5 h-3.5" /> Connected
                   </span>
                 ) : (
-                  <span className="flex items-center gap-1 text-[11px] font-medium text-slate-400 bg-slate-800 px-2.5 py-1 rounded-full border border-slate-700">
-                    <XCircle className="w-3.5 h-3.5" /> Demo / Unlinked
+                  <span className="flex items-center gap-1 text-[11px] font-medium text-slate-400 bg-slate-800 px-2 py-1 rounded-full border border-slate-700">
+                    <XCircle className="w-3.5 h-3.5" /> Demo
                   </span>
                 )}
               </div>
             </div>
+
+            {!zerodhaActive && (
+              <div className="mb-4 p-2.5 rounded-xl text-xs bg-amber-500/10 border border-amber-500/30 text-amber-300 flex items-center justify-between">
+                <span>Account paused — Zerodha holdings and alerts are excluded from your portfolio.</span>
+                <button
+                  type="button"
+                  onClick={() => handleToggleBroker("zerodha", false)}
+                  className="underline font-bold hover:text-amber-200 ml-2 text-[11px]"
+                >
+                  Enable
+                </button>
+              </div>
+            )}
 
             {zMsg && (
               <div className="mb-4 p-2.5 rounded-xl text-xs bg-indigo-500/15 border border-indigo-500/30 text-indigo-300">
@@ -253,7 +302,11 @@ export const BrokerSettings: React.FC<BrokerSettingsProps> = ({
         </div>
 
         {/* 2. Angel One (SmartAPI) Settings */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
+        <div className={`border rounded-2xl p-6 shadow-xl flex flex-col justify-between transition-all ${
+          angelActive
+            ? "bg-slate-900/90 border-slate-800"
+            : "bg-slate-900/50 border-slate-800/60 opacity-80"
+        }`}>
           <div>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2.5">
@@ -266,18 +319,46 @@ export const BrokerSettings: React.FC<BrokerSettingsProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleToggleBroker("angelone", angelActive)}
+                  disabled={togglingBroker === "angelone"}
+                  title={angelActive ? "Click to pause tracking Angel One" : "Click to enable tracking Angel One"}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all ${
+                    angelActive
+                      ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20"
+                      : "bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700 hover:text-slate-200"
+                  }`}
+                >
+                  <span className={`w-2 h-2 rounded-full ${angelActive ? "bg-emerald-400" : "bg-slate-500"}`} />
+                  <span>{angelActive ? "Tracking: Active" : "Tracking: Paused"}</span>
+                </button>
+
                 {angelStatus ? (
-                  <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                  <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-full border border-emerald-500/20">
                     <CheckCircle2 className="w-3.5 h-3.5" /> Connected
                   </span>
                 ) : (
-                  <span className="flex items-center gap-1 text-[11px] font-medium text-slate-400 bg-slate-800 px-2.5 py-1 rounded-full border border-slate-700">
-                    <XCircle className="w-3.5 h-3.5" /> Demo / Unlinked
+                  <span className="flex items-center gap-1 text-[11px] font-medium text-slate-400 bg-slate-800 px-2 py-1 rounded-full border border-slate-700">
+                    <XCircle className="w-3.5 h-3.5" /> Demo
                   </span>
                 )}
               </div>
             </div>
+
+            {!angelActive && (
+              <div className="mb-4 p-2.5 rounded-xl text-xs bg-amber-500/10 border border-amber-500/30 text-amber-300 flex items-center justify-between">
+                <span>Account paused — Angel One holdings and alerts are excluded from your portfolio.</span>
+                <button
+                  type="button"
+                  onClick={() => handleToggleBroker("angelone", false)}
+                  className="underline font-bold hover:text-amber-200 ml-2 text-[11px]"
+                >
+                  Enable
+                </button>
+              </div>
+            )}
 
             {aMsg && (
               <div className="mb-4 p-2.5 rounded-xl text-xs bg-indigo-500/15 border border-indigo-500/30 text-indigo-300">

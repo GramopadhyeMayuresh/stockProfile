@@ -8,6 +8,7 @@ class BrokerAccount(BaseModel):
     id: str  # 'zerodha' | 'angelone'
     client_id: Optional[str] = None
     is_connected: bool = False
+    is_active: bool = True
     last_synced_at: Optional[str] = None
 
 

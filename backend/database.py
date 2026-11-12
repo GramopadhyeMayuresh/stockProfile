@@ -27,10 +27,17 @@ async def init_db():
                 id TEXT PRIMARY KEY,
                 client_id TEXT,
                 is_connected BOOLEAN DEFAULT 0,
+                is_active BOOLEAN DEFAULT 1,
                 last_synced_at TEXT,
                 credentials_json TEXT
             );
         """)
+
+        # Migration for existing database
+        try:
+            await db.execute("ALTER TABLE broker_accounts ADD COLUMN is_active BOOLEAN DEFAULT 1")
+        except Exception:
+            pass
 
         await db.execute("""
             CREATE TABLE IF NOT EXISTS holdings (
@@ -119,9 +126,17 @@ async def set_sector_override(isin: str, sector: str, symbol: str = ""):
         await db.commit()
 
 
-async def get_all_holdings() -> List[Dict[str, Any]]:
+async def get_all_holdings(active_brokers_only: bool = True) -> List[Dict[str, Any]]:
     async with get_db_connection() as db:
-        cursor = await db.execute("SELECT * FROM holdings ORDER BY current_value DESC")
+        if active_brokers_only:
+            cursor = await db.execute("""
+                SELECT h.* FROM holdings h
+                JOIN broker_accounts b ON h.broker = b.id
+                WHERE b.is_active = 1
+                ORDER BY h.current_value DESC
+            """)
+        else:
+            cursor = await db.execute("SELECT * FROM holdings ORDER BY current_value DESC")
         rows = await cursor.fetchall()
         return [dict(row) for row in rows]
 
@@ -174,13 +189,25 @@ async def get_broker_accounts() -> Dict[str, Dict[str, Any]]:
         rows = await cursor.fetchall()
         res = {}
         for r in rows:
+            is_act = bool(r["is_active"]) if "is_active" in r.keys() and r["is_active"] is not None else True
             res[r["id"]] = {
                 "id": r["id"],
                 "client_id": r["client_id"],
                 "is_connected": bool(r["is_connected"]),
+                "is_active": is_act,
                 "last_synced_at": r["last_synced_at"],
             }
         return res
+
+
+async def toggle_broker_active(broker: str, is_active: bool):
+    async with get_db_connection() as db:
+        await db.execute("""
+            UPDATE broker_accounts
+            SET is_active = ?
+            WHERE id = ?
+        """, (1 if is_active else 0, broker))
+        await db.commit()
 
 
 async def update_broker_status(broker: str, is_connected: bool, client_id: Optional[str] = None):

@@ -32,6 +32,7 @@ export interface BrokerAccount {
   id: string;
   client_id?: string;
   is_connected: boolean;
+  is_active?: boolean;
   last_synced_at?: string;
 }
 

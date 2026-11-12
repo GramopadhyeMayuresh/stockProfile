@@ -89,6 +89,12 @@ export async function loginAngelOne(clientId: string, passwordPin: string, apiKe
   return res.json();
 }
 
+export async function toggleBrokerActive(brokerId: string, isActive: boolean): Promise<{ status: string }> {
+  const res = await fetchWithTimeout(`${API_BASE}/brokers/${brokerId}/toggle?is_active=${isActive}`, { method: "POST" });
+  if (!res.ok) throw new Error("Failed to toggle broker active state");
+  return res.json();
+}
+
 export async function fetchAlerts(): Promise<Alert[]> {
   const res = await fetchWithTimeout(`${API_BASE}/alerts`);
   if (!res.ok) throw new Error("Failed to fetch alerts");
