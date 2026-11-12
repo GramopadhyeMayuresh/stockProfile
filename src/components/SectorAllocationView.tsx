@@ -202,3 +202,4 @@ export const SectorAllocationView: React.FC<SectorAllocationViewProps> = ({
     </div>
   );
 };
+

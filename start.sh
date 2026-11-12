@@ -17,7 +17,7 @@ else
     
     # Wait for backend to be ready
     for i in {1..30}; do
-        if curl -s http://127.0.0.1:8765/api/health >/dev/null; then
+        if curl -s http://127.0.0.1:8765/api/health >/dev/null 2>&1; then
             echo "✅ Python backend daemon is live and listening!"
             break
         fi
@@ -25,8 +25,32 @@ else
     done
 fi
 
-# 2. Launch Tauri Desktop App
 export PATH="$HOME/.cargo/bin:$PATH"
+
+# 2. Check for Standalone Release Binary (No dev server needed)
+if [ -f "$DIR/src-tauri/target/release/stock_profile" ]; then
+    echo "🖥️  Launching StockProfile native macOS standalone application..."
+    exec "$DIR/src-tauri/target/release/stock_profile"
+fi
+
+# 3. If running Debug Binary, ensure Vite frontend dev server is running first!
+if lsof -Pi :1420 -sTCP:LISTEN -t >/dev/null ; then
+    echo "✅ Frontend server already running on http://127.0.0.1:1420"
+else
+    echo "⚡ Starting frontend dev server on http://127.0.0.1:1420..."
+    npx vite --host 127.0.0.1 --port 1420 > "$DIR/.vite.log" 2>&1 &
+    VITE_PID=$!
+    echo $VITE_PID > "$DIR/.vite.pid"
+    
+    for i in {1..30}; do
+        if curl -s http://127.0.0.1:1420 >/dev/null 2>&1; then
+            echo "✅ Frontend server is live!"
+            break
+        fi
+        sleep 0.5
+    done
+fi
+
 if [ -f "$DIR/src-tauri/target/debug/stock_profile" ]; then
     echo "🖥️  Launching StockProfile native macOS window..."
     exec "$DIR/src-tauri/target/debug/stock_profile"

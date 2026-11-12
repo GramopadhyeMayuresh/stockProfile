@@ -153,3 +153,4 @@ async def aggregate_holdings(raw_holdings: List[Dict[str, Any]]) -> Tuple[List[A
     )
 
     return aggregated_list, sector_allocations, summary
+

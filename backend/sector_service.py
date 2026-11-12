@@ -60,3 +60,4 @@ async def resolve_sector(isin: str, symbol: str) -> str:
         print(f"[SectorService] Could not resolve sector for {symbol} via yfinance: {e}")
 
     return "Other"
+

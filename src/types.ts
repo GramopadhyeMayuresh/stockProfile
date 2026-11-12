@@ -74,3 +74,4 @@ export interface AlertCreate {
   broker_sync?: "LOCAL_ONLY" | "ZERODHA_GTT" | "ANGEL_RULE";
   note?: string;
 }
+

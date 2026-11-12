@@ -305,3 +305,4 @@ export const HoldingsTable: React.FC<HoldingsTableProps> = ({
     </div>
   );
 };
+

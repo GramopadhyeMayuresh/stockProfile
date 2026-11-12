@@ -190,6 +190,33 @@ export function App() {
     );
   }
 
+  if (!summary) {
+    return (
+      <div className="min-h-screen bg-[#0b0f19] flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center space-y-4 shadow-2xl">
+          <div className="w-12 h-12 mx-auto rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center font-bold text-lg">
+            ⚡
+          </div>
+          <h2 className="text-base font-bold text-white">Connecting to Backend Engine</h2>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            StockProfile requires the local Python daemon running on <code className="text-indigo-400">http://127.0.0.1:8765</code>.
+          </p>
+          <div className="pt-2 flex items-center justify-center gap-3">
+            <button
+              onClick={() => {
+                setLoading(true);
+                loadData();
+              }}
+              className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-all shadow-md shadow-indigo-600/30"
+            >
+              Retry Connection
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#0b0f19] text-slate-100 flex flex-col">
       <Navbar

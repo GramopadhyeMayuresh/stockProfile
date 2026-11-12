@@ -336,3 +336,4 @@ async def sse_events(request: Request):
             alert_daemon.unsubscribe(queue)
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+

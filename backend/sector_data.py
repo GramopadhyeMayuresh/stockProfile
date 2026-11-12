@@ -122,3 +122,4 @@ KNOWN_INDIAN_STOCKS = {
 
 # Fast symbol -> ISIN reverse map
 SYMBOL_TO_ISIN = {v["symbol"].upper(): k for k, v in KNOWN_INDIAN_STOCKS.items()}
+

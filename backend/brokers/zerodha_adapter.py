@@ -118,3 +118,4 @@ class ZerodhaAdapter:
             last_price=limit_price,
             orders=orders
         )
+

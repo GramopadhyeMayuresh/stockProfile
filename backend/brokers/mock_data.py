@@ -188,3 +188,4 @@ ANGELONE_MOCK_HOLDINGS = [
         "sector": "Telecommunication"
     }
 ]
+

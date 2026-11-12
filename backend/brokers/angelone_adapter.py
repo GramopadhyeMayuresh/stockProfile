@@ -152,3 +152,4 @@ class AngelOneAdapter:
             "timeperiod": 365
         }
         return self.smart_api.gttCreateRule(params)
+
