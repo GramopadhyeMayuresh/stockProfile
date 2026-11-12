@@ -98,6 +98,37 @@ async def init_db():
             );
         """)
 
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS portfolio_snapshots (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                date TEXT UNIQUE NOT NULL,
+                total_invested REAL NOT NULL,
+                total_current_value REAL NOT NULL,
+                total_pnl REAL NOT NULL,
+                total_pnl_percent REAL NOT NULL,
+                day_pnl REAL DEFAULT 0.0,
+                nifty50_close REAL DEFAULT 0.0,
+                created_at TEXT NOT NULL
+            );
+        """)
+
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS technical_cache (
+                isin TEXT PRIMARY KEY,
+                tradingsymbol TEXT NOT NULL,
+                last_price REAL NOT NULL,
+                high_52w REAL NOT NULL,
+                low_52w REAL NOT NULL,
+                pct_from_52w_high REAL NOT NULL,
+                pct_from_52w_low REAL NOT NULL,
+                ema_50 REAL NOT NULL,
+                ema_200 REAL NOT NULL,
+                pct_from_200_ema REAL NOT NULL,
+                trend_signal TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+        """)
+
         # Ensure broker_accounts rows exist
         await db.execute("INSERT OR IGNORE INTO broker_accounts (id, is_connected) VALUES ('zerodha', 0)")
         await db.execute("INSERT OR IGNORE INTO broker_accounts (id, is_connected) VALUES ('angelone', 0)")
@@ -353,6 +384,110 @@ async def upsert_dividend_cache_batch(items: List[Dict[str, Any]]):
                 float(item.get("dividend_yield", 0.0)),
                 item.get("ex_dividend_date"),
                 payouts_json,
+                now
+            ))
+        await db.commit()
+
+
+async def get_portfolio_snapshots(days: Optional[int] = None) -> List[Dict[str, Any]]:
+    """
+    Fetch historical daily portfolio snapshots ordered chronologically.
+    """
+    async with get_db_connection() as db:
+        if days:
+            cursor = await db.execute("""
+                SELECT * FROM portfolio_snapshots
+                ORDER BY date DESC LIMIT ?
+            """, (days,))
+            rows = await cursor.fetchall()
+            return [dict(r) for r in reversed(rows)]
+        else:
+            cursor = await db.execute("""
+                SELECT * FROM portfolio_snapshots
+                ORDER BY date ASC
+            """)
+            rows = await cursor.fetchall()
+            return [dict(r) for r in rows]
+
+
+async def upsert_portfolio_snapshot(
+    date_str: str,
+    invested: float,
+    current_val: float,
+    pnl: float,
+    pnl_pct: float,
+    day_pnl: float = 0.0,
+    nifty_close: float = 0.0
+):
+    """
+    Record or update a daily portfolio snapshot.
+    """
+    now = datetime.now().isoformat()
+    async with get_db_connection() as db:
+        await db.execute("""
+            INSERT INTO portfolio_snapshots (
+                date, total_invested, total_current_value, total_pnl,
+                total_pnl_percent, day_pnl, nifty50_close, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(date) DO UPDATE SET
+                total_invested = excluded.total_invested,
+                total_current_value = excluded.total_current_value,
+                total_pnl = excluded.total_pnl,
+                total_pnl_percent = excluded.total_pnl_percent,
+                day_pnl = excluded.day_pnl,
+                nifty50_close = COALESCE(NULLIF(excluded.nifty50_close, 0.0), portfolio_snapshots.nifty50_close),
+                created_at = excluded.created_at
+        """, (date_str, invested, current_val, pnl, pnl_pct, day_pnl, nifty_close, now))
+        await db.commit()
+
+
+async def get_technical_cache() -> Dict[str, Dict[str, Any]]:
+    """
+    Fetch all cached technical indicator metrics keyed by ISIN.
+    """
+    async with get_db_connection() as db:
+        cursor = await db.execute("SELECT * FROM technical_cache")
+        rows = await cursor.fetchall()
+        return {r["isin"]: dict(r) for r in rows}
+
+
+async def upsert_technical_cache_batch(items: List[Dict[str, Any]]):
+    """
+    Upsert a batch of technical indicator records.
+    """
+    now = datetime.now().isoformat()
+    async with get_db_connection() as db:
+        for item in items:
+            await db.execute("""
+                INSERT INTO technical_cache (
+                    isin, tradingsymbol, last_price, high_52w, low_52w,
+                    pct_from_52w_high, pct_from_52w_low, ema_50, ema_200,
+                    pct_from_200_ema, trend_signal, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(isin) DO UPDATE SET
+                    tradingsymbol = excluded.tradingsymbol,
+                    last_price = excluded.last_price,
+                    high_52w = excluded.high_52w,
+                    low_52w = excluded.low_52w,
+                    pct_from_52w_high = excluded.pct_from_52w_high,
+                    pct_from_52w_low = excluded.pct_from_52w_low,
+                    ema_50 = excluded.ema_50,
+                    ema_200 = excluded.ema_200,
+                    pct_from_200_ema = excluded.pct_from_200_ema,
+                    trend_signal = excluded.trend_signal,
+                    updated_at = excluded.updated_at
+            """, (
+                item["isin"],
+                item["tradingsymbol"],
+                float(item["last_price"]),
+                float(item["high_52w"]),
+                float(item["low_52w"]),
+                float(item["pct_from_52w_high"]),
+                float(item["pct_from_52w_low"]),
+                float(item["ema_50"]),
+                float(item["ema_200"]),
+                float(item["pct_from_200_ema"]),
+                item["trend_signal"],
                 now
             ))
         await db.commit()

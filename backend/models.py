@@ -172,3 +172,12 @@ class DividendSummary(BaseModel):
     stocks: List[StockDividendInfo]
     upcoming_events: List[Dict[str, Any]] = Field(default_factory=list)
     last_updated: Optional[str] = None
+
+
+class TechnicalPresetAlertRequest(BaseModel):
+    tradingsymbol: str
+    isin: str
+    exchange: str = "NSE"
+    preset_type: str
+    target_value: float
+    note: str = ""

@@ -37,9 +37,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const tabs = [
     { id: "overview", label: "Dashboard", icon: LayoutDashboard },
+    { id: "history", label: "History & Trend", icon: TrendingUp },
     { id: "sectors", label: "Sector Allocation", icon: PieChart },
     { id: "dividends", label: "Dividends & Cashflow", icon: Coins },
-    { id: "alerts", label: "Alerts & Daemon", icon: BellRing, badge: activeAlertCount },
+    { id: "alerts", label: "Alerts & Technicals", icon: BellRing, badge: activeAlertCount },
     { id: "brokers", label: "Broker Accounts", icon: Settings },
   ];
 

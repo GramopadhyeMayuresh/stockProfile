@@ -1,4 +1,14 @@
-import { AggregatedHolding, SectorAllocation, PortfolioSummary, Alert, AlertCreate, BrokerAccount, DividendSummary } from "./types";
+import {
+  AggregatedHolding,
+  SectorAllocation,
+  PortfolioSummary,
+  Alert,
+  AlertCreate,
+  BrokerAccount,
+  DividendSummary,
+  PortfolioHistoryResponse,
+  TechnicalIndicatorItem,
+} from "./types";
 
 const API_BASE = "http://127.0.0.1:8765/api";
 
@@ -40,6 +50,41 @@ export async function fetchPortfolioDividends(): Promise<DividendSummary> {
 export async function refreshPortfolioDividends(): Promise<DividendSummary> {
   const res = await fetchWithTimeout(`${API_BASE}/portfolio/dividends/refresh`, { method: "POST" }, 30000);
   if (!res.ok) throw new Error("Failed to refresh dividend summary");
+  return res.json();
+}
+
+export async function fetchPortfolioHistory(timeframe = "1M"): Promise<PortfolioHistoryResponse> {
+  const res = await fetchWithTimeout(`${API_BASE}/portfolio/history?timeframe=${timeframe}`);
+  if (!res.ok) throw new Error("Failed to fetch portfolio history");
+  return res.json();
+}
+
+export async function fetchTechnicalIndicators(): Promise<TechnicalIndicatorItem[]> {
+  const res = await fetchWithTimeout(`${API_BASE}/technical/indicators`);
+  if (!res.ok) throw new Error("Failed to fetch technical indicators");
+  return res.json();
+}
+
+export async function refreshTechnicalIndicators(): Promise<TechnicalIndicatorItem[]> {
+  const res = await fetchWithTimeout(`${API_BASE}/technical/refresh`, { method: "POST" }, 30000);
+  if (!res.ok) throw new Error("Failed to refresh technical indicators");
+  return res.json();
+}
+
+export async function createTechnicalPresetAlert(payload: {
+  tradingsymbol: string;
+  isin: string;
+  exchange?: string;
+  preset_type: string;
+  target_value: number;
+  note?: string;
+}): Promise<{ status: string; alert_id: number }> {
+  const res = await fetchWithTimeout(`${API_BASE}/technical/create-preset-alert`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error("Failed to create preset alert");
   return res.json();
 }
 

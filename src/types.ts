@@ -129,3 +129,48 @@ export interface DividendSummary {
   last_updated?: string | null;
 }
 
+export interface PortfolioSnapshot {
+  id?: number;
+  date: string;
+  total_invested: number;
+  total_current_value: number;
+  total_pnl: number;
+  total_pnl_percent: number;
+  day_pnl: number;
+  nifty50_close?: number;
+  created_at?: string;
+}
+
+export interface PortfolioHistoryResponse {
+  timeframe: string;
+  snapshots: PortfolioSnapshot[];
+  start_value: number;
+  end_value: number;
+  period_change_value: number;
+  period_change_percent: number;
+  all_time_high_value: number;
+  all_time_high_date: string;
+  all_time_low_value: number;
+  all_time_low_date: string;
+  nifty_benchmark_return_percent: number;
+}
+
+export interface TechnicalIndicatorItem {
+  isin: string;
+  tradingsymbol: string;
+  company_name: string;
+  sector: string;
+  total_quantity: number;
+  last_price: number;
+  average_price: number;
+  high_52w: number;
+  low_52w: number;
+  pct_from_52w_high: number;
+  pct_from_52w_low: number;
+  ema_50: number;
+  ema_200: number;
+  pct_from_200_ema: number;
+  trend_signal: string;
+  updated_at?: string;
+}
+

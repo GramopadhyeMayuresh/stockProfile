@@ -17,10 +17,12 @@ from .database import (
 from .models import (
     PortfolioSummary, AggregatedHolding, SectorAllocation, Alert,
     AlertCreate, ZerodhaAuthRequest, AngelOneAuthRequest, SectorOverrideRequest,
-    DividendSummary
+    DividendSummary, TechnicalPresetAlertRequest
 )
 from .portfolio_aggregator import aggregate_holdings
 from .dividend_service import calculate_portfolio_dividends
+from .history_service import get_portfolio_history_analytics, ensure_initial_snapshots
+from .technical_service import get_or_calculate_technicals
 from .sector_data import KNOWN_INDIAN_STOCKS, SYMBOL_TO_ISIN
 from .brokers.zerodha_adapter import ZerodhaAdapter
 from .brokers.angelone_adapter import AngelOneAdapter
@@ -123,6 +125,57 @@ async def refresh_portfolio_dividends():
     holdings = await get_all_holdings()
     agg, _, _ = await aggregate_holdings(holdings)
     return await calculate_portfolio_dividends(agg, force_refresh=True)
+
+
+@app.get("/api/portfolio/history")
+async def get_portfolio_history(timeframe: str = "1M"):
+    """
+    Get portfolio net worth history trajectory, benchmark, and ATH/ATL metrics.
+    """
+    holdings = await get_all_holdings()
+    _, _, summary = await aggregate_holdings(holdings)
+    return await get_portfolio_history_analytics(timeframe=timeframe, current_summary=summary)
+
+
+@app.get("/api/technical/indicators")
+async def get_technical_indicators():
+    """
+    Get 52-Week High/Low proximity, 50/200 EMA trend signals for all holdings.
+    """
+    holdings = await get_all_holdings()
+    agg, _, _ = await aggregate_holdings(holdings)
+    return await get_or_calculate_technicals(agg, force_refresh=False)
+
+
+@app.post("/api/technical/refresh")
+async def refresh_technical_indicators():
+    """
+    Force-refresh 52-Week High/Low and 50/200 EMA technical calculations.
+    """
+    holdings = await get_all_holdings()
+    agg, _, _ = await aggregate_holdings(holdings)
+    return await get_or_calculate_technicals(agg, force_refresh=True)
+
+
+@app.post("/api/technical/create-preset-alert")
+async def create_preset_alert(req: TechnicalPresetAlertRequest):
+    """
+    1-Click creation of technical setup alerts.
+    """
+    condition = "PRICE_ABOVE"
+    if req.preset_type in ["TRAILING_STOP_5", "200_EMA_SUPPORT_BREAK"]:
+        condition = "PRICE_BELOW"
+
+    alert_id = await create_alert({
+        "isin": req.isin,
+        "tradingsymbol": req.tradingsymbol,
+        "exchange": req.exchange,
+        "condition_type": condition,
+        "target_value": req.target_value,
+        "broker_sync": "LOCAL_ONLY",
+        "note": req.note or f"Technical Alert: {req.preset_type}",
+    })
+    return {"status": "success", "alert_id": alert_id}
 
 
 ALL_EXPORT_COLUMNS = {

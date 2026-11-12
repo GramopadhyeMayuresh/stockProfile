@@ -10,9 +10,9 @@ This document tracks the feature roadmap for **StockProfile** (macOS Indian Equi
 | :---: | :--- | :---: | :---: | :--- |
 | **P0** | **1-Click Excel/CSV Export** | ✅ **Completed** | `v0.1.0` | Instant CA & Tax-audit ready reports with custom field selection |
 | **P1** | **Dividend Calendar & Expected Cashflow** | ✅ **Completed** | `v0.2.0` | Track upcoming ex-dates, yield-on-cost & projected annual ₹ cashflow |
-| **P2** | **Market Cap Breakdown (Large/Mid/Small Cap)** | ⏳ **Next Up** | `v0.2.1` | SEBI/AMFI asset allocation distribution & risk profiling |
-| **P3** | **Daily Portfolio Value History & Trend Chart** | 📋 **Planned** | `v0.3.0` | Local SQLite snapshotting & interactive compounding chart |
-| **P4** | **52-Week High & 200 EMA Technical Alerts** | 📋 **Planned** | `v0.3.1` | Background scanner for breakout levels & moving average crosses |
+| **P2** | **Daily Portfolio Value History & Trend Chart** | ✅ **Completed** | `v0.3.0` | Local SQLite snapshots & interactive compounding curve vs Nifty 50 |
+| **P3** | **52-Week High & 200 EMA Technical Alerts** | ✅ **Completed** | `v0.3.1` | Background scanner for breakout setups & 200 EMA trend support |
+| **P4** | **Market Cap Breakdown (Large/Mid/Small Cap)** | ⏳ **Next Up** | `v0.3.2` | SEBI/AMFI asset allocation distribution & risk profiling |
 
 ---
 

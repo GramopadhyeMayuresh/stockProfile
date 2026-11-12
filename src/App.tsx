@@ -4,6 +4,7 @@ import { KPICards } from "./components/KPICards";
 import { HoldingsTable } from "./components/HoldingsTable";
 import { SectorAllocationView } from "./components/SectorAllocationView";
 import { DividendCashflowView } from "./components/DividendCashflowView";
+import { PortfolioHistoryView } from "./components/PortfolioHistoryView";
 import { AlertsManager } from "./components/AlertsManager";
 import { BrokerSettings } from "./components/BrokerSettings";
 import { CreateAlertModal } from "./components/CreateAlertModal";
@@ -281,7 +282,12 @@ export function App() {
           </div>
         )}
 
-        {/* TAB 2: SECTOR ALLOCATION */}
+        {/* TAB 2: HISTORY & COMPOUNDING TREND */}
+        {currentTab === "history" && (
+          <PortfolioHistoryView isMasked={isMasked} />
+        )}
+
+        {/* TAB 3: SECTOR ALLOCATION */}
         {currentTab === "sectors" && (
           <div className="space-y-6">
             <SectorAllocationView
