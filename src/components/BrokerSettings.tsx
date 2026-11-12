@@ -6,6 +6,7 @@ import {
   getZerodhaAuthUrl,
   seedDemoPortfolio,
 } from "../api";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   ShieldCheck,
   ExternalLink,
@@ -31,6 +32,7 @@ export const BrokerSettings: React.FC<BrokerSettingsProps> = ({
   const [zReqToken, setZReqToken] = useState("");
   const [zLoading, setZLoading] = useState(false);
   const [zMsg, setZMsg] = useState<string | null>(null);
+  const [zOAuthUrl, setZOAuthUrl] = useState<string | null>(null);
 
   // Angel One state
   const [aClientId, setAClientId] = useState("");
@@ -56,9 +58,27 @@ export const BrokerSettings: React.FC<BrokerSettingsProps> = ({
   };
 
   const handleZerodhaOAuth = async () => {
+    setZMsg(null);
+    const key = zApiKey.trim();
+    if (!key) {
+      setZMsg("Please enter your Zerodha API Key above first.");
+      return;
+    }
     try {
-      const res = await getZerodhaAuthUrl(zApiKey || undefined);
-      window.open(res.url, "_blank");
+      if (zApiSecret.trim()) {
+        await saveZerodhaCredentials(key, zApiSecret.trim());
+      }
+      const res = await getZerodhaAuthUrl(key);
+      if (res && res.url) {
+        setZOAuthUrl(res.url);
+        setZMsg("Opening Kite login in your browser...");
+        try {
+          await openUrl(res.url);
+        } catch (openErr) {
+          console.warn("openUrl fallback to window.open:", openErr);
+          window.open(res.url, "_blank");
+        }
+      }
     } catch (err: any) {
       setZMsg(`OAuth Error: ${err.message}`);
     }
@@ -197,11 +217,38 @@ export const BrokerSettings: React.FC<BrokerSettingsProps> = ({
                   <span>{zLoading ? "Saving..." : "Save to Keychain"}</span>
                 </button>
               </div>
+
+              {zOAuthUrl && (
+                <div className="mt-3 p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-[11px] flex flex-col gap-1">
+                  <span className="text-slate-400">If your browser did not open automatically:</span>
+                  <a
+                    href={zOAuthUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      openUrl(zOAuthUrl).catch(() => window.open(zOAuthUrl, "_blank"));
+                    }}
+                    className="text-orange-400 underline font-semibold break-all hover:text-orange-300 flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>Click here to open Kite Login page</span>
+                    <ExternalLink className="w-3 h-3 shrink-0" />
+                  </a>
+                </div>
+              )}
             </form>
           </div>
 
-          <div className="mt-4 pt-3 border-t border-slate-800 text-[11px] text-slate-500">
-            Kite Connect tokens expire daily at 06:00 AM IST as per SEBI regulations.
+          <div className="mt-4 pt-3 border-t border-slate-800 space-y-1.5 text-[11px] text-slate-400">
+            <div className="flex items-center gap-1.5 text-slate-300">
+              <span className="font-semibold text-orange-400">Redirect URL for Kite app:</span>
+              <code className="bg-slate-950 px-1.5 py-0.5 rounded text-[10px] text-indigo-300 font-mono select-all">
+                http://127.0.0.1:8765/callback/zerodha
+              </code>
+            </div>
+            <p className="text-slate-500">
+              Kite Connect tokens expire daily at 06:00 AM IST as per SEBI regulations.
+            </p>
           </div>
         </div>
 
