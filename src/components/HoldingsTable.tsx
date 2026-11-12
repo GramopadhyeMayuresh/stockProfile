@@ -10,7 +10,9 @@ import {
   Layers,
   Download,
   Check,
+  SlidersHorizontal,
 } from "lucide-react";
+import { ExportModal } from "./ExportModal";
 
 interface HoldingsTableProps {
   holdings: AggregatedHolding[];
@@ -86,111 +88,7 @@ export const HoldingsTable: React.FC<HoldingsTableProps> = ({
   };
 
   const [exported, setExported] = useState(false);
-
-  const handleExportCSV = () => {
-    const headers = [
-      "Trading Symbol",
-      "Company Name",
-      "ISIN",
-      "Exchange",
-      "Sector",
-      "Sector Code",
-      "Brokers",
-      "Zerodha Qty",
-      "Angel One Qty",
-      "Total Quantity",
-      "Weighted Avg Price (INR)",
-      "LTP (INR)",
-      "Invested Value (INR)",
-      "Current Value (INR)",
-      "Unrealized P&L (INR)",
-      "Return (%)",
-      "Today P&L (INR)",
-      "Today Change (%)",
-      "Portfolio Weight (%)",
-    ];
-
-    const escapeCSV = (val: any) => {
-      if (val === null || val === undefined) return '""';
-      const str = String(val).replace(/"/g, '""');
-      return `"${str}"`;
-    };
-
-    const rows = filtered.map((h) => {
-      const zQty = h.broker_quantities["zerodha"] || 0;
-      const aQty = h.broker_quantities["angelone"] || 0;
-      const brokerStr = h.brokers.map((b) => (b === "zerodha" ? "Zerodha" : "Angel One")).join(" + ");
-      const dayPnl = (h.total_quantity * h.day_change).toFixed(2);
-
-      return [
-        escapeCSV(h.tradingsymbol),
-        escapeCSV(h.company_name || h.tradingsymbol),
-        escapeCSV(h.isin),
-        escapeCSV(h.exchange),
-        escapeCSV(h.sector),
-        escapeCSV(getSectorAbbr(h.sector)),
-        escapeCSV(brokerStr),
-        zQty,
-        aQty,
-        h.total_quantity,
-        h.average_price.toFixed(2),
-        h.last_price.toFixed(2),
-        h.invested_value.toFixed(2),
-        h.current_value.toFixed(2),
-        h.pnl.toFixed(2),
-        `"${h.pnl_percent.toFixed(2)}%"`,
-        dayPnl,
-        `"${h.day_change_percent.toFixed(2)}%"`,
-        `"${h.weight_percent.toFixed(2)}%"`,
-      ].join(",");
-    });
-
-    const totalInvested = filtered.reduce((acc, h) => acc + h.invested_value, 0);
-    const totalCurrent = filtered.reduce((acc, h) => acc + h.current_value, 0);
-    const totalPnl = totalCurrent - totalInvested;
-    const totalPnlPct = totalInvested > 0 ? (totalPnl / totalInvested) * 100 : 0;
-    const totalDayPnl = filtered.reduce((acc, h) => acc + h.total_quantity * h.day_change, 0);
-    const totalQty = filtered.reduce((acc, h) => acc + h.total_quantity, 0);
-    const totalZQty = filtered.reduce((acc, h) => acc + (h.broker_quantities["zerodha"] || 0), 0);
-    const totalAQty = filtered.reduce((acc, h) => acc + (h.broker_quantities["angelone"] || 0), 0);
-
-    const totalRow = [
-      '"TOTAL"',
-      '""',
-      '""',
-      '""',
-      '""',
-      '""',
-      '""',
-      totalZQty,
-      totalAQty,
-      totalQty,
-      '""',
-      '""',
-      totalInvested.toFixed(2),
-      totalCurrent.toFixed(2),
-      totalPnl.toFixed(2),
-      `"${totalPnlPct.toFixed(2)}%"`,
-      totalDayPnl.toFixed(2),
-      '""',
-      '"100.00%"',
-    ].join(",");
-
-    const csvContent = "\uFEFF" + [headers.join(","), ...rows, "", totalRow].join("\r\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    const today = new Date().toISOString().split("T")[0];
-    link.setAttribute("href", url);
-    link.setAttribute("download", `StockProfile_Portfolio_${today}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
-    setExported(true);
-    setTimeout(() => setExported(false), 2500);
-  };
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   return (
     <div className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
@@ -258,11 +156,11 @@ export const HoldingsTable: React.FC<HoldingsTableProps> = ({
             ))}
           </select>
 
-          {/* 1-Click Excel/CSV Export */}
+          {/* 1-Click Excel/CSV Export with Field Selection */}
           <button
             type="button"
-            onClick={handleExportCSV}
-            title="Export portfolio holdings to CSV / Excel for Tax & CA reporting"
+            onClick={() => setIsExportModalOpen(true)}
+            title="Configure and export portfolio holdings to CSV / Excel"
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all shadow-sm ${
               exported
                 ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
@@ -275,6 +173,7 @@ export const HoldingsTable: React.FC<HoldingsTableProps> = ({
               <Download className="w-3.5 h-3.5 text-indigo-400" />
             )}
             <span>{exported ? "Exported!" : "Export CSV"}</span>
+            <SlidersHorizontal className="w-3 h-3 text-slate-400 ml-0.5 opacity-70" />
           </button>
         </div>
       </div>
@@ -503,6 +402,17 @@ export const HoldingsTable: React.FC<HoldingsTableProps> = ({
           </tbody>
         </table>
       </div>
+
+      {/* Field-Selectable Export Modal */}
+      <ExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        holdings={filtered}
+        onExportSuccess={() => {
+          setExported(true);
+          setTimeout(() => setExported(false), 2500);
+        }}
+      />
     </div>
   );
 };

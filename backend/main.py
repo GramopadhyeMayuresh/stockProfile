@@ -103,84 +103,63 @@ async def get_sectors():
     return sectors
 
 
+ALL_EXPORT_COLUMNS = {
+    "tradingsymbol": ("Trading Symbol", lambda h: h.tradingsymbol, lambda agg: "TOTAL"),
+    "company_name": ("Company Name", lambda h: h.company_name or h.tradingsymbol, lambda agg: ""),
+    "isin": ("ISIN", lambda h: h.isin, lambda agg: ""),
+    "exchange": ("Exchange", lambda h: h.exchange, lambda agg: ""),
+    "sector": ("Sector", lambda h: h.sector, lambda agg: ""),
+    "brokers": ("Brokers", lambda h: " + ".join(["Zerodha" if b == "zerodha" else "Angel One" for b in h.brokers]), lambda agg: ""),
+    "zerodha_qty": ("Zerodha Qty", lambda h: h.broker_quantities.get("zerodha", 0), lambda agg: sum(h.broker_quantities.get("zerodha", 0) for h in agg)),
+    "angelone_qty": ("Angel One Qty", lambda h: h.broker_quantities.get("angelone", 0), lambda agg: sum(h.broker_quantities.get("angelone", 0) for h in agg)),
+    "total_quantity": ("Total Quantity", lambda h: h.total_quantity, lambda agg: sum(h.total_quantity for h in agg)),
+    "average_price": ("Weighted Avg Price (INR)", lambda h: f"{h.average_price:.2f}", lambda agg: ""),
+    "last_price": ("LTP (INR)", lambda h: f"{h.last_price:.2f}", lambda agg: ""),
+    "invested_value": ("Invested Value (INR)", lambda h: f"{h.invested_value:.2f}", lambda agg: f"{sum(h.invested_value for h in agg):.2f}"),
+    "current_value": ("Current Value (INR)", lambda h: f"{h.current_value:.2f}", lambda agg: f"{sum(h.current_value for h in agg):.2f}"),
+    "pnl": ("Unrealized P&L (INR)", lambda h: f"{h.pnl:.2f}", lambda agg: f"{(sum(h.current_value for h in agg) - sum(h.invested_value for h in agg)):.2f}"),
+    "pnl_percent": ("Return (%)", lambda h: f"{h.pnl_percent:.2f}%", lambda agg: f"{((sum(h.current_value for h in agg) - sum(h.invested_value for h in agg)) / sum(h.invested_value for h in agg) * 100):.2f}%" if sum(h.invested_value for h in agg) > 0 else "0.00%"),
+    "day_pnl": ("Today P&L (INR)", lambda h: f"{(h.total_quantity * h.day_change):.2f}", lambda agg: f"{sum(h.total_quantity * h.day_change for h in agg):.2f}"),
+    "day_change_percent": ("Today Change (%)", lambda h: f"{h.day_change_percent:.2f}%", lambda agg: ""),
+    "weight_percent": ("Portfolio Weight (%)", lambda h: f"{h.weight_percent:.2f}%", lambda agg: "100.00%"),
+}
+
+
 @app.get("/api/portfolio/export/csv")
-async def export_portfolio_csv():
+async def export_portfolio_csv(fields: Optional[str] = None, include_totals: bool = True):
     """
     Export current aggregated holdings as a UTF-8 BOM CSV file suitable for Excel/Numbers/CA reporting.
+    Optionally filter columns by passing comma-separated field keys via ?fields=...
     """
     holdings = await get_all_holdings()
     agg, _, _ = await aggregate_holdings(holdings)
+
+    # Determine columns to export
+    if fields:
+        requested = [f.strip() for f in fields.split(",") if f.strip() in ALL_EXPORT_COLUMNS]
+        col_keys = requested if requested else list(ALL_EXPORT_COLUMNS.keys())
+    else:
+        col_keys = list(ALL_EXPORT_COLUMNS.keys())
 
     output = io.StringIO()
     # Write UTF-8 BOM for Excel
     output.write("\ufeff")
     writer = csv.writer(output)
 
-    writer.writerow([
-        "Trading Symbol", "Company Name", "ISIN", "Exchange", "Sector",
-        "Brokers", "Zerodha Qty", "Angel One Qty", "Total Quantity",
-        "Weighted Avg Price (INR)", "LTP (INR)", "Invested Value (INR)",
-        "Current Value (INR)", "Unrealized P&L (INR)", "Return (%)",
-        "Today P&L (INR)", "Today Change (%)", "Portfolio Weight (%)"
-    ])
+    # Write headers
+    headers = [ALL_EXPORT_COLUMNS[k][0] for k in col_keys]
+    writer.writerow(headers)
 
-    total_invested = 0.0
-    total_current = 0.0
-    total_qty = 0
-    total_z_qty = 0
-    total_a_qty = 0
-    total_day_pnl = 0.0
-
+    # Write stock rows
     for h in agg:
-        z_qty = h.broker_quantities.get("zerodha", 0)
-        a_qty = h.broker_quantities.get("angelone", 0)
-        broker_str = " + ".join(["Zerodha" if b == "zerodha" else "Angel One" for b in h.brokers])
-        day_pnl = round(h.total_quantity * h.day_change, 2)
+        row = [ALL_EXPORT_COLUMNS[k][1](h) for k in col_keys]
+        writer.writerow(row)
 
-        total_invested += h.invested_value
-        total_current += h.current_value
-        total_qty += h.total_quantity
-        total_z_qty += z_qty
-        total_a_qty += a_qty
-        total_day_pnl += day_pnl
-
-        writer.writerow([
-            h.tradingsymbol,
-            h.company_name or h.tradingsymbol,
-            h.isin,
-            h.exchange,
-            h.sector,
-            broker_str,
-            z_qty,
-            a_qty,
-            h.total_quantity,
-            f"{h.average_price:.2f}",
-            f"{h.last_price:.2f}",
-            f"{h.invested_value:.2f}",
-            f"{h.current_value:.2f}",
-            f"{h.pnl:.2f}",
-            f"{h.pnl_percent:.2f}%",
-            f"{day_pnl:.2f}",
-            f"{h.day_change_percent:.2f}%",
-            f"{h.weight_percent:.2f}%"
-        ])
-
-    total_pnl = total_current - total_invested
-    total_pnl_pct = (total_pnl / total_invested * 100) if total_invested > 0 else 0.0
-
-    writer.writerow([])
-    writer.writerow([
-        "TOTAL", "", "", "", "",
-        "", total_z_qty, total_a_qty, total_qty,
-        "", "",
-        f"{total_invested:.2f}",
-        f"{total_current:.2f}",
-        f"{total_pnl:.2f}",
-        f"{total_pnl_pct:.2f}%",
-        f"{total_day_pnl:.2f}",
-        "",
-        "100.00%"
-    ])
+    # Write total row if enabled
+    if include_totals and agg:
+        total_row = [ALL_EXPORT_COLUMNS[k][2](agg) for k in col_keys]
+        writer.writerow([])
+        writer.writerow(total_row)
 
     csv_bytes = output.getvalue().encode("utf-8")
     today_str = date.today().isoformat()
