@@ -86,6 +86,18 @@ async def init_db():
             );
         """)
 
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS dividend_cache (
+                isin TEXT PRIMARY KEY,
+                tradingsymbol TEXT NOT NULL,
+                dividend_rate REAL DEFAULT 0.0,
+                dividend_yield REAL DEFAULT 0.0,
+                ex_dividend_date TEXT,
+                recent_payouts_json TEXT DEFAULT '[]',
+                updated_at TEXT NOT NULL
+            );
+        """)
+
         # Ensure broker_accounts rows exist
         await db.execute("INSERT OR IGNORE INTO broker_accounts (id, is_connected) VALUES ('zerodha', 0)")
         await db.execute("INSERT OR IGNORE INTO broker_accounts (id, is_connected) VALUES ('angelone', 0)")
@@ -286,4 +298,61 @@ async def update_alert_status(alert_id: int, status: str, last_price: Optional[f
 async def delete_alert(alert_id: int):
     async with get_db_connection() as db:
         await db.execute("DELETE FROM alerts WHERE id = ?", (alert_id,))
+        await db.commit()
+
+
+async def get_all_cached_dividends() -> Dict[str, Dict[str, Any]]:
+    """
+    Fetch all cached dividend data keyed by ISIN.
+    """
+    async with get_db_connection() as db:
+        cursor = await db.execute("SELECT * FROM dividend_cache")
+        rows = await cursor.fetchall()
+        result = {}
+        for r in rows:
+            try:
+                payouts = json.loads(r["recent_payouts_json"]) if r["recent_payouts_json"] else []
+            except Exception:
+                payouts = []
+            result[r["isin"]] = {
+                "isin": r["isin"],
+                "tradingsymbol": r["tradingsymbol"],
+                "dividend_rate": float(r["dividend_rate"] or 0.0),
+                "dividend_yield": float(r["dividend_yield"] or 0.0),
+                "ex_dividend_date": r["ex_dividend_date"],
+                "recent_payouts": payouts,
+                "updated_at": r["updated_at"],
+            }
+        return result
+
+
+async def upsert_dividend_cache_batch(items: List[Dict[str, Any]]):
+    """
+    Upsert a batch of dividend cache records.
+    """
+    now = datetime.now().isoformat()
+    async with get_db_connection() as db:
+        for item in items:
+            payouts_json = json.dumps(item.get("recent_payouts", []))
+            await db.execute("""
+                INSERT INTO dividend_cache (
+                    isin, tradingsymbol, dividend_rate, dividend_yield,
+                    ex_dividend_date, recent_payouts_json, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(isin) DO UPDATE SET
+                    tradingsymbol = excluded.tradingsymbol,
+                    dividend_rate = excluded.dividend_rate,
+                    dividend_yield = excluded.dividend_yield,
+                    ex_dividend_date = excluded.ex_dividend_date,
+                    recent_payouts_json = excluded.recent_payouts_json,
+                    updated_at = excluded.updated_at
+            """, (
+                item["isin"],
+                item["tradingsymbol"],
+                float(item.get("dividend_rate", 0.0)),
+                float(item.get("dividend_yield", 0.0)),
+                item.get("ex_dividend_date"),
+                payouts_json,
+                now
+            ))
         await db.commit()

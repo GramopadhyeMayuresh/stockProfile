@@ -3,6 +3,7 @@ import { Navbar } from "./components/Navbar";
 import { KPICards } from "./components/KPICards";
 import { HoldingsTable } from "./components/HoldingsTable";
 import { SectorAllocationView } from "./components/SectorAllocationView";
+import { DividendCashflowView } from "./components/DividendCashflowView";
 import { AlertsManager } from "./components/AlertsManager";
 import { BrokerSettings } from "./components/BrokerSettings";
 import { CreateAlertModal } from "./components/CreateAlertModal";
@@ -13,6 +14,7 @@ import {
   Alert,
   AlertCreate,
   BrokerAccount,
+  DividendSummary,
 } from "./types";
 import {
   fetchPortfolioSummary,
@@ -26,6 +28,8 @@ import {
   toggleAlertStatus,
   testTriggerAlert,
   fetchBrokersStatus,
+  fetchPortfolioDividends,
+  refreshPortfolioDividends,
 } from "./api";
 import { isPermissionGranted, requestPermission, sendNotification } from "@tauri-apps/plugin-notification";
 import { listen } from "@tauri-apps/api/event";
@@ -38,6 +42,8 @@ export function App() {
   const [sectors, setSectors] = useState<SectorAllocation[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [brokers, setBrokers] = useState<Record<string, BrokerAccount>>({});
+  const [dividendData, setDividendData] = useState<DividendSummary | null>(null);
+  const [isRefreshingDividends, setIsRefreshingDividends] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedStockForAlert, setSelectedStockForAlert] = useState<AggregatedHolding | null>(null);
@@ -59,24 +65,38 @@ export function App() {
   // Load all data
   const loadData = useCallback(async () => {
     try {
-      const [sum, hld, sec, alr, brk] = await Promise.all([
+      const [sum, hld, sec, alr, brk, divs] = await Promise.all([
         fetchPortfolioSummary(),
         fetchHoldings(),
         fetchSectors(),
         fetchAlerts(),
         fetchBrokersStatus(),
+        fetchPortfolioDividends().catch(() => null),
       ]);
       setSummary(sum);
       setHoldings(hld);
       setSectors(sec);
       setAlerts(alr);
       setBrokers(brk);
+      if (divs) setDividendData(divs);
     } catch (err) {
       console.error("[StockProfile] Error loading data:", err);
     } finally {
       setLoading(false);
     }
   }, []);
+
+  const handleRefreshDividends = async () => {
+    setIsRefreshingDividends(true);
+    try {
+      const fresh = await refreshPortfolioDividends();
+      setDividendData(fresh);
+    } catch (err) {
+      console.error("[StockProfile] Error refreshing dividends:", err);
+    } finally {
+      setIsRefreshingDividends(false);
+    }
+  };
 
   useEffect(() => {
     loadData();
@@ -270,6 +290,16 @@ export function App() {
               isMasked={isMasked}
             />
           </div>
+        )}
+
+        {/* TAB 3: DIVIDENDS & CASHFLOW */}
+        {currentTab === "dividends" && (
+          <DividendCashflowView
+            dividendData={dividendData}
+            onRefresh={handleRefreshDividends}
+            isRefreshing={isRefreshingDividends}
+            isMasked={isMasked}
+          />
         )}
 
         {/* TAB 4: ALERTS & DAEMON */}

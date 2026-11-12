@@ -76,3 +76,56 @@ export interface AlertCreate {
   note?: string;
 }
 
+export interface DividendPayout {
+  date: string;
+  amount: number;
+}
+
+export interface StockDividendInfo {
+  isin: string;
+  tradingsymbol: string;
+  company_name?: string;
+  total_quantity: number;
+  last_price: number;
+  average_price: number;
+  current_value: number;
+  invested_value: number;
+  dividend_rate: number;
+  dividend_yield: number;
+  yield_on_cost: number;
+  annual_cashflow: number;
+  ex_dividend_date?: string | null;
+  recent_payouts: DividendPayout[];
+}
+
+export interface MonthlyCashflow {
+  month: string;
+  month_name: string;
+  month_index: number;
+  projected_amount: number;
+  stocks: string[];
+}
+
+export interface UpcomingDividendEvent {
+  tradingsymbol: string;
+  company_name: string;
+  ex_dividend_date: string;
+  dividend_rate: number;
+  total_quantity: number;
+  estimated_payout: number;
+  dividend_yield: number;
+}
+
+export interface DividendSummary {
+  total_annual_cashflow: number;
+  average_monthly_cashflow: number;
+  portfolio_dividend_yield: number;
+  portfolio_yield_on_cost: number;
+  dividend_paying_stocks_count: number;
+  total_stocks_count: number;
+  monthly_cashflow: MonthlyCashflow[];
+  stocks: StockDividendInfo[];
+  upcoming_events: UpcomingDividendEvent[];
+  last_updated?: string | null;
+}
+

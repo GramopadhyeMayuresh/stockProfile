@@ -16,9 +16,11 @@ from .database import (
 )
 from .models import (
     PortfolioSummary, AggregatedHolding, SectorAllocation, Alert,
-    AlertCreate, ZerodhaAuthRequest, AngelOneAuthRequest, SectorOverrideRequest
+    AlertCreate, ZerodhaAuthRequest, AngelOneAuthRequest, SectorOverrideRequest,
+    DividendSummary
 )
 from .portfolio_aggregator import aggregate_holdings
+from .dividend_service import calculate_portfolio_dividends
 from .sector_data import KNOWN_INDIAN_STOCKS, SYMBOL_TO_ISIN
 from .brokers.zerodha_adapter import ZerodhaAdapter
 from .brokers.angelone_adapter import AngelOneAdapter
@@ -101,6 +103,26 @@ async def get_sectors():
     holdings = await get_all_holdings()
     _, sectors, _ = await aggregate_holdings(holdings)
     return sectors
+
+
+@app.get("/api/portfolio/dividends", response_model=DividendSummary)
+async def get_portfolio_dividends():
+    """
+    Get portfolio dividend metrics, expected annual/monthly cashflow, and calendar.
+    """
+    holdings = await get_all_holdings()
+    agg, _, _ = await aggregate_holdings(holdings)
+    return await calculate_portfolio_dividends(agg, force_refresh=False)
+
+
+@app.post("/api/portfolio/dividends/refresh", response_model=DividendSummary)
+async def refresh_portfolio_dividends():
+    """
+    Force-refresh all holdings dividend metrics from Yahoo Finance.
+    """
+    holdings = await get_all_holdings()
+    agg, _, _ = await aggregate_holdings(holdings)
+    return await calculate_portfolio_dividends(agg, force_refresh=True)
 
 
 ALL_EXPORT_COLUMNS = {

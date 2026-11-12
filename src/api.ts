@@ -1,4 +1,4 @@
-import { AggregatedHolding, SectorAllocation, PortfolioSummary, Alert, AlertCreate, BrokerAccount } from "./types";
+import { AggregatedHolding, SectorAllocation, PortfolioSummary, Alert, AlertCreate, BrokerAccount, DividendSummary } from "./types";
 
 const API_BASE = "http://127.0.0.1:8765/api";
 
@@ -28,6 +28,18 @@ export async function fetchHoldings(): Promise<AggregatedHolding[]> {
 export async function fetchSectors(): Promise<SectorAllocation[]> {
   const res = await fetchWithTimeout(`${API_BASE}/portfolio/sectors`);
   if (!res.ok) throw new Error("Failed to fetch sectors");
+  return res.json();
+}
+
+export async function fetchPortfolioDividends(): Promise<DividendSummary> {
+  const res = await fetchWithTimeout(`${API_BASE}/portfolio/dividends`);
+  if (!res.ok) throw new Error("Failed to fetch dividend summary");
+  return res.json();
+}
+
+export async function refreshPortfolioDividends(): Promise<DividendSummary> {
+  const res = await fetchWithTimeout(`${API_BASE}/portfolio/dividends/refresh`, { method: "POST" }, 30000);
+  if (!res.ok) throw new Error("Failed to refresh dividend summary");
   return res.json();
 }
 

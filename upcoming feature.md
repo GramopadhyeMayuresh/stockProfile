@@ -9,8 +9,8 @@ This document tracks the feature roadmap for **StockProfile** (macOS Indian Equi
 | Priority | Feature | Status | Target Version | Key Value Proposition |
 | :---: | :--- | :---: | :---: | :--- |
 | **P0** | **1-Click Excel/CSV Export** | ✅ **Completed** | `v0.1.0` | Instant CA & Tax-audit ready reports with custom field selection |
-| **P1** | **Dividend Calendar & Expected Cashflow** | ⏳ **Next Up** | `v0.2.0` | Track upcoming ex-dates & projected annual passive income |
-| **P2** | **Market Cap Breakdown (Large/Mid/Small Cap)** | 📋 **Planned** | `v0.2.1` | SEBI/AMFI asset allocation distribution & risk profiling |
+| **P1** | **Dividend Calendar & Expected Cashflow** | ✅ **Completed** | `v0.2.0` | Track upcoming ex-dates, yield-on-cost & projected annual ₹ cashflow |
+| **P2** | **Market Cap Breakdown (Large/Mid/Small Cap)** | ⏳ **Next Up** | `v0.2.1` | SEBI/AMFI asset allocation distribution & risk profiling |
 | **P3** | **Daily Portfolio Value History & Trend Chart** | 📋 **Planned** | `v0.3.0` | Local SQLite snapshotting & interactive compounding chart |
 | **P4** | **52-Week High & 200 EMA Technical Alerts** | 📋 **Planned** | `v0.3.1` | Background scanner for breakout levels & moving average crosses |
 
@@ -34,15 +34,22 @@ This document tracks the feature roadmap for **StockProfile** (macOS Indian Equi
 ---
 
 ## 2. Dividend Calendar & Expected Cashflow Tracker
-- **Status:** ⏳ **Next Up (Priority 1)**
-- **Target Release:** `v0.2.0`
-- **Motivation:** Indian retail investors holding dividend aristocrats (e.g. ITC, Coal India, Vedant, SBI, PowerGrid) need visibility into passive cashflows without paying for premium platforms.
-
-### Technical Specification:
-1. **Data Source:**
-   - Free Yahoo Finance ticker data (`ticker.dividends`, `ticker.info["dividendYield"]`, `ticker.calendar`).
-   - Cache dividend frequency (Annual / Semi-Annual / Interim / Special) in SQLite `dividends` table.
-2. **Key Metrics & UI Views:**
+- **Status:** ✅ **Completed & Shipped** (`v0.2.0`)
+- **Component References:**
+  - Frontend Tab: `src/components/DividendCashflowView.tsx`
+  - Navigation: `src/components/Navbar.tsx` (`Dividends & Cashflow` tab)
+  - Backend Service: `backend/dividend_service.py`
+  - Database Table: `dividend_cache` in `backend/database.py`
+  - Backend APIs: `GET /api/portfolio/dividends` & `POST /api/portfolio/dividends/refresh`
+- **Key Capabilities Delivered:**
+  - [x] Multi-threaded concurrent dividend fetcher for Indian NSE equities (strips broker series suffixes like `-BE`, `-EQ`).
+  - [x] Fast SQLite cache (`dividend_cache`) providing instant < 2ms lookups.
+  - [x] Projected Annual Dividend ₹ and Average Monthly ₹ Cashflow computation.
+  - [x] Portfolio Dividend Yield % (on current valuation) and Yield on Cost % (on actual invested capital).
+  - [x] Interactive 12-Month Projected Cashflow Bar Chart (Jan–Dec) with click-to-filter stock inspection.
+  - [x] Upcoming & Recent Ex-Dividend Dates timeline with share counts and estimated payout credit.
+  - [x] Stock-by-stock breakdown table with sorting, search, and historical payout badges.
+  - [x] Full Privacy Mode masking support (`isMasked` respects `₹ ••••••`).
    - **Annual Dividend Income:** Total expected annual cashflow in ₹ based on current shares held.
    - **Portfolio Dividend Yield:** Weighted portfolio dividend yield %.
    - **Interactive Cashflow Calendar:** Projected monthly payout bar chart (January to December).
@@ -115,3 +122,4 @@ This document tracks the feature roadmap for **StockProfile** (macOS Indian Equi
 | **2026-11-12** | `addd670` | **Account Toggle & Privacy Mode**: Added single-broker enable/disable toggles, masked financial mode, and daily vs overall P&L. |
 | **2026-11-12** | `4dfa98e` | **Angel One SmartAPI Live Sync**: Silent TOTP token generation, holding fetch fix, symbol sanitation (`-EQ`). |
 | **2026-11-12** | `6b2e310` | **Zerodha Kite Connect OAuth**: Local loopback redirect, keychain secret storage, portfolio aggregation. |
+

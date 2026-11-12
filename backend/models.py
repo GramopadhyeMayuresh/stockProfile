@@ -129,3 +129,46 @@ class AngelOneAuthRequest(BaseModel):
 class SectorOverrideRequest(BaseModel):
     isin: str
     sector: str
+
+
+class DividendPayout(BaseModel):
+    date: str
+    amount: float
+
+
+class StockDividendInfo(BaseModel):
+    isin: str
+    tradingsymbol: str
+    company_name: Optional[str] = None
+    total_quantity: int
+    last_price: float
+    average_price: float
+    current_value: float
+    invested_value: float
+    dividend_rate: float
+    dividend_yield: float
+    yield_on_cost: float
+    annual_cashflow: float
+    ex_dividend_date: Optional[str] = None
+    recent_payouts: List[DividendPayout] = Field(default_factory=list)
+
+
+class MonthlyCashflow(BaseModel):
+    month: str
+    month_name: str
+    month_index: int
+    projected_amount: float
+    stocks: List[str] = Field(default_factory=list)
+
+
+class DividendSummary(BaseModel):
+    total_annual_cashflow: float
+    average_monthly_cashflow: float
+    portfolio_dividend_yield: float
+    portfolio_yield_on_cost: float
+    dividend_paying_stocks_count: int
+    total_stocks_count: int
+    monthly_cashflow: List[MonthlyCashflow]
+    stocks: List[StockDividendInfo]
+    upcoming_events: List[Dict[str, Any]] = Field(default_factory=list)
+    last_updated: Optional[str] = None
