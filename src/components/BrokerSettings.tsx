@@ -356,8 +356,41 @@ export const BrokerSettings: React.FC<BrokerSettingsProps> = ({
             </form>
           </div>
 
-          <div className="mt-4 pt-3 border-t border-slate-800 text-[11px] text-slate-500">
-            Angel One sessions auto-refresh silently in the background with pyotp without prompting.
+          <div className="mt-4 pt-3 border-t border-slate-800 space-y-1.5 text-[11px] text-slate-400">
+            <div className="flex items-center justify-between text-slate-300">
+              <span className="font-semibold text-blue-400">Quick Links:</span>
+              <div className="flex items-center gap-3">
+                <a
+                  href="https://smartapi.angelbroking.com"
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    openUrl("https://smartapi.angelbroking.com").catch(() => window.open("https://smartapi.angelbroking.com", "_blank"));
+                  }}
+                  className="text-blue-400 hover:text-blue-300 underline flex items-center gap-1 cursor-pointer"
+                >
+                  <span>SmartAPI Portal</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+                <a
+                  href="https://smartapi.angelbroking.com/enable-totp"
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    openUrl("https://smartapi.angelbroking.com/enable-totp").catch(() => window.open("https://smartapi.angelbroking.com/enable-totp", "_blank"));
+                  }}
+                  className="text-blue-400 hover:text-blue-300 underline flex items-center gap-1 cursor-pointer"
+                >
+                  <span>Get TOTP Key</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </div>
+            <p className="text-slate-500">
+              Angel One sessions auto-refresh silently in the background with pyotp without prompting.
+            </p>
           </div>
         </div>
       </div>

@@ -55,20 +55,25 @@ class AngelOneAdapter:
         Automated Angel One login generating dynamic TOTP via pyotp.
         """
         try:
-            totp = pyotp.TOTP(totp_secret.replace(" ", ""))
+            clean_client_id = client_id.strip().upper()
+            clean_pin = password_pin.strip()
+            clean_api_key = api_key.strip()
+            clean_secret = totp_secret.replace(" ", "").strip().upper()
+
+            totp = pyotp.TOTP(clean_secret)
             totp_code = totp.now()
 
-            smart_api = SmartConnect(api_key=api_key)
-            login_data = smart_api.generateSession(client_id, password_pin, totp_code)
+            smart_api = SmartConnect(api_key=clean_api_key)
+            login_data = smart_api.generateSession(clean_client_id, clean_pin, totp_code)
 
             if login_data.get("status"):
                 data = login_data.get("data", {})
                 self.jwt_token = data.get("jwtToken")
                 self.feed_token = data.get("feedToken")
                 self.smart_api = smart_api
-                self.client_id = client_id
-                self.api_key = api_key
-                self.save_credentials(client_id, api_key, password_pin, totp_secret, self.jwt_token, self.feed_token)
+                self.client_id = clean_client_id
+                self.api_key = clean_api_key
+                self.save_credentials(clean_client_id, clean_api_key, clean_pin, clean_secret, self.jwt_token, self.feed_token)
                 return {"status": True, "message": "Login successful", "data": data}
             else:
                 return {"status": False, "message": login_data.get("message", "Login failed")}
