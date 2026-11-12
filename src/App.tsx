@@ -233,22 +233,10 @@ export function App() {
         {currentTab === "overview" && (
           <div className="space-y-6">
             <KPICards summary={summary} />
-
-            {/* Split row: Donut Preview + Top Holdings Preview */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              <div className="lg:col-span-5">
-                <SectorAllocationView
-                  sectors={sectors}
-                  totalPortfolioValue={summary?.total_current_value || 0}
-                />
-              </div>
-              <div className="lg:col-span-7">
-                <HoldingsTable
-                  holdings={holdings}
-                  onOpenAlertModal={setSelectedStockForAlert}
-                />
-              </div>
-            </div>
+            <HoldingsTable
+              holdings={holdings}
+              onOpenAlertModal={setSelectedStockForAlert}
+            />
           </div>
         )}
 
