@@ -180,3 +180,4 @@ async def get_or_calculate_technicals(
     # Sort: breakout setups first (closest to 52-week high)
     out.sort(key=lambda x: x["pct_from_52w_high"])
     return out
+

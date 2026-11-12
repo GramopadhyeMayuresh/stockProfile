@@ -138,3 +138,4 @@ async def get_portfolio_history_analytics(
         "all_time_low_date": atl_item["date"],
         "nifty_benchmark_return_percent": nifty_pct,
     }
+

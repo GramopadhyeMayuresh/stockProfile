@@ -1,4 +1,6 @@
 import os
+import sys
+import shutil
 import aiosqlite
 import json
 from datetime import datetime
@@ -7,7 +9,23 @@ from .sector_data import KNOWN_INDIAN_STOCKS
 
 from contextlib import asynccontextmanager
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "stockprofile.db")
+def resolve_db_path() -> str:
+    # If running as bundled PyInstaller binary or in production
+    app_support = os.path.expanduser("~/Library/Application Support/com.stockprofile.desktop")
+    dev_db = os.path.join(os.path.dirname(__file__), "stockprofile.db")
+
+    if getattr(sys, "frozen", False) or os.path.exists(app_support):
+        os.makedirs(app_support, exist_ok=True)
+        prod_db = os.path.join(app_support, "stockprofile.db")
+        if not os.path.exists(prod_db) and os.path.exists(dev_db):
+            try:
+                shutil.copy2(dev_db, prod_db)
+            except Exception:
+                pass
+        return prod_db
+    return dev_db
+
+DB_PATH = resolve_db_path()
 
 
 @asynccontextmanager

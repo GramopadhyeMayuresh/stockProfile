@@ -197,3 +197,4 @@ Accessible via the **Export CSV** button in the Holdings toolbar.
 - **Excel & Apple Numbers Compatible:** Encoded with **UTF-8 BOM (`\uFEFF`)** and CRLF row delimiters, preventing garbled Indian Rupee symbols (₹) or formatting corruptions.
 - **Persistent Preferences:** Remembers your column selections in `localStorage`.
 - **REST API Endpoint:** External tools or scripts can query `GET /api/portfolio/export/csv?fields=tradingsymbol,total_quantity,last_price,current_value&include_totals=true`.
+

@@ -12,6 +12,9 @@ node_modules
 dist
 dist-ssr
 *.local
+build/
+*.spec
+src-tauri/binaries/stockprofile-backend*
 # Python
 __pycache__/
 *.py[cod]
