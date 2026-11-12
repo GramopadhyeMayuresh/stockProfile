@@ -16,16 +16,22 @@ import {
   XCircle,
   Sparkles,
   Lock,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 interface BrokerSettingsProps {
   brokers: Record<string, BrokerAccount>;
   onRefresh: () => void;
+  isMasked?: boolean;
+  onToggleMask?: () => void;
 }
 
 export const BrokerSettings: React.FC<BrokerSettingsProps> = ({
   brokers,
   onRefresh,
+  isMasked = true,
+  onToggleMask,
 }) => {
   // Zerodha state
   const [zApiKey, setZApiKey] = useState("");
@@ -123,6 +129,8 @@ export const BrokerSettings: React.FC<BrokerSettingsProps> = ({
 
   const angelStatus = brokers["angelone"]?.is_connected;
   const angelActive = brokers["angelone"]?.is_active ?? true;
+
+  const hasConnectedBroker = Object.values(brokers).some((b) => b.is_connected);
 
   return (
     <div className="space-y-6">
@@ -476,27 +484,67 @@ export const BrokerSettings: React.FC<BrokerSettingsProps> = ({
         </div>
       </div>
 
-      {/* Demo Mode Card */}
-      <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
-            <Sparkles className="w-4 h-4" />
-          </div>
-          <div>
-            <div className="text-xs font-bold text-white">Reset or Refresh Demo Portfolio</div>
-            <div className="text-[11px] text-slate-400">
-              Populates realistic multi-broker portfolios with ISIN overlap (HDFC Bank, TCS, Reliance, etc.)
+      {/* Bottom Action Card: Privacy Masking (when connected) OR Demo Mode (when disconnected) */}
+      {hasConnectedBroker ? (
+        <div className="p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950/20 to-slate-900 border border-indigo-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
+          <div className="flex items-center gap-3.5">
+            <div className={`p-2.5 rounded-xl border ${
+              isMasked ? "bg-amber-500/10 text-amber-400 border-amber-500/30" : "bg-indigo-500/10 text-indigo-400 border-indigo-500/20"
+            }`}>
+              {isMasked ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+            </div>
+            <div>
+              <div className="text-sm font-bold text-white flex items-center gap-2">
+                <span>Privacy Mode: Mask Financial Amounts</span>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                  isMasked
+                    ? "bg-amber-500/15 text-amber-300 border border-amber-500/30"
+                    : "bg-slate-800 text-slate-400 border border-slate-700"
+                }`}>
+                  {isMasked ? "MASKED (DEFAULT)" : "UNMASKED"}
+                </span>
+              </div>
+              <div className="text-xs text-slate-400 mt-0.5">
+                Conceals all rupee balances, invested sums, stock prices, and profit numbers across the dashboard and holdings.
+              </div>
             </div>
           </div>
-        </div>
 
-        <button
-          onClick={handleSeedDemo}
-          className="px-4 py-2 rounded-xl text-xs font-bold text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-all"
-        >
-          Reset Demo Data
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={onToggleMask}
+            className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-2 shrink-0 ${
+              isMasked
+                ? "bg-amber-500/15 text-amber-300 border-amber-500/40 hover:bg-amber-500/25"
+                : "bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700 hover:text-white"
+            }`}
+          >
+            {isMasked ? <EyeOff className="w-4 h-4 text-amber-400" /> : <Eye className="w-4 h-4 text-slate-400" />}
+            <span>{isMasked ? "Masked: Click to Reveal" : "Visible: Click to Mask"}</span>
+          </button>
+        </div>
+      ) : (
+        <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="text-xs font-bold text-white">Reset or Refresh Demo Portfolio</div>
+              <div className="text-[11px] text-slate-400">
+                Populates realistic multi-broker portfolios with ISIN overlap (HDFC Bank, TCS, Reliance, etc.)
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={handleSeedDemo}
+            className="px-4 py-2 rounded-xl text-xs font-bold text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-all"
+          >
+            Reset Demo Data
+          </button>
+        </div>
+      )}
     </div>
   );
 };

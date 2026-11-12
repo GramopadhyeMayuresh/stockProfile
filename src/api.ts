@@ -139,7 +139,35 @@ export async function overrideSector(isin: string, sector: string): Promise<{ st
   return res.json();
 }
 
-export function formatINR(val: number): string {
+export const SECTOR_ABBREVIATIONS: Record<string, string> = {
+  "Information Technology": "IT",
+  "Financial Services": "FIN",
+  "Consumer Durables & Retail": "CONS",
+  "Fast Moving Consumer Goods": "FMCG",
+  "FMCG": "FMCG",
+  "Healthcare & Pharma": "PHARMA",
+  "Oil, Gas & Energy": "ENERGY",
+  "Automobile & Auto Components": "AUTO",
+  "Metals & Mining": "METALS",
+  "Capital Goods & Infra": "INFRA",
+  "Chemicals": "CHEM",
+  "Telecommunication": "TELECOM",
+  "Power": "POWER",
+  "Real Estate": "REALTY",
+  "Services": "SERV",
+  "Media": "MEDIA",
+  "Other": "OTHER",
+};
+
+export function getSectorAbbr(sector: string): string {
+  if (!sector) return "OTHER";
+  return SECTOR_ABBREVIATIONS[sector] || (sector.length <= 6 ? sector.toUpperCase() : sector.slice(0, 5).toUpperCase());
+}
+
+export function formatINR(val: number, isMasked: boolean = false): string {
+  if (isMasked) {
+    return "₹ ••••••";
+  }
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",

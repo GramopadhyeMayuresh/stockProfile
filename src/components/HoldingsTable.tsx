@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { AggregatedHolding } from "../types";
-import { formatINR } from "../api";
+import { formatINR, getSectorAbbr } from "../api";
 import {
   Search,
   ArrowUpDown,
@@ -13,6 +13,7 @@ import {
 interface HoldingsTableProps {
   holdings: AggregatedHolding[];
   onOpenAlertModal: (holding: AggregatedHolding) => void;
+  isMasked?: boolean;
 }
 
 type SortField =
@@ -26,6 +27,7 @@ type SortField =
 export const HoldingsTable: React.FC<HoldingsTableProps> = ({
   holdings,
   onOpenAlertModal,
+  isMasked = false,
 }) => {
   const [search, setSearch] = useState("");
   const [selectedSector, setSelectedSector] = useState("ALL");
@@ -187,32 +189,50 @@ export const HoldingsTable: React.FC<HoldingsTableProps> = ({
                     </div>
                   </td>
 
-                  {/* Broker Badges */}
+                  {/* Broker Badges (Abbreviated with Hover Details) */}
                   <td className="py-3 px-3">
                     {hasBothBrokers ? (
-                      <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-orange-500/15 via-purple-500/15 to-blue-500/15 border border-purple-500/30 text-[10px] font-bold text-purple-300">
-                        <span>Zerodha + Angel One</span>
+                      <div
+                        className="inline-flex items-center gap-1 cursor-help"
+                        title={`Zerodha Kite: ${stock.broker_quantities["zerodha"] || 0} shares | Angel One SmartAPI: ${stock.broker_quantities["angelone"] || 0} shares`}
+                      >
+                        <span className="px-1.5 py-0.5 rounded bg-orange-500/15 border border-orange-500/30 text-orange-300 font-bold font-mono text-[10px]">
+                          ZER
+                        </span>
+                        <span className="text-slate-500 text-[10px]">+</span>
+                        <span className="px-1.5 py-0.5 rounded bg-blue-500/15 border border-blue-500/30 text-blue-300 font-bold font-mono text-[10px]">
+                          ANG
+                        </span>
                       </div>
                     ) : stock.brokers.includes("zerodha") ? (
-                      <span className="inline-block px-2 py-0.5 rounded-full bg-orange-500/10 border border-orange-500/30 text-orange-400 font-semibold text-[10px]">
-                        Zerodha Kite
+                      <span
+                        title={`Zerodha Kite Connect (${stock.total_quantity} shares)`}
+                        className="inline-block px-1.5 py-0.5 rounded bg-orange-500/15 border border-orange-500/30 text-orange-300 font-bold font-mono text-[10px] cursor-help"
+                      >
+                        ZER
                       </span>
                     ) : (
-                      <span className="inline-block px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 font-semibold text-[10px]">
-                        Angel One
+                      <span
+                        title={`Angel One SmartAPI (${stock.total_quantity} shares)`}
+                        className="inline-block px-1.5 py-0.5 rounded bg-blue-500/15 border border-blue-500/30 text-blue-300 font-bold font-mono text-[10px] cursor-help"
+                      >
+                        ANG
                       </span>
                     )}
                     {hasBothBrokers && (
-                      <div className="text-[10px] text-slate-400 mt-1">
+                      <div className="text-[10px] font-mono text-slate-400 mt-0.5">
                         Z: {stock.broker_quantities["zerodha"] || 0} | A: {stock.broker_quantities["angelone"] || 0}
                       </div>
                     )}
                   </td>
 
-                  {/* Sector */}
+                  {/* Sector (Abbreviated with Hover Details) */}
                   <td className="py-3 px-3">
-                    <span className="inline-block px-2.5 py-1 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-300 font-medium text-[11px]">
-                      {stock.sector}
+                    <span
+                      title={`Sector: ${stock.sector}`}
+                      className="inline-block px-2 py-0.5 rounded-md bg-slate-800/90 border border-slate-700/80 text-slate-300 font-bold font-mono text-[10px] tracking-wide cursor-help hover:border-slate-500 hover:text-white transition-colors"
+                    >
+                      {getSectorAbbr(stock.sector)}
                     </span>
                   </td>
 
@@ -222,14 +242,14 @@ export const HoldingsTable: React.FC<HoldingsTableProps> = ({
                       {stock.total_quantity.toLocaleString()}
                     </div>
                     <div className="text-[11px] text-slate-400">
-                      Avg: {formatINR(stock.average_price)}
+                      Avg: {formatINR(stock.average_price, isMasked)}
                     </div>
                   </td>
 
                   {/* LTP */}
                   <td className="py-3 px-3 text-right">
                     <div className="font-semibold text-white">
-                      {formatINR(stock.last_price)}
+                      {formatINR(stock.last_price, isMasked)}
                     </div>
                     <div
                       className={`flex items-center justify-end text-[11px] font-semibold ${
@@ -245,10 +265,10 @@ export const HoldingsTable: React.FC<HoldingsTableProps> = ({
                   {/* Current Value */}
                   <td className="py-3 px-4 text-right">
                     <div className="font-bold text-white">
-                      {formatINR(stock.current_value)}
+                      {formatINR(stock.current_value, isMasked)}
                     </div>
                     <div className="text-[11px] text-slate-400">
-                      Inv: {formatINR(stock.invested_value)}
+                      Inv: {formatINR(stock.invested_value, isMasked)}
                     </div>
                   </td>
 
@@ -260,7 +280,7 @@ export const HoldingsTable: React.FC<HoldingsTableProps> = ({
                       }`}
                     >
                       {isProfit ? "+" : ""}
-                      {formatINR(stock.pnl)}
+                      {formatINR(stock.pnl, isMasked)}
                     </div>
                     <div
                       className={`text-[11px] font-semibold ${

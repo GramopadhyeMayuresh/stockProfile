@@ -7,6 +7,8 @@ import {
   Settings,
   RefreshCw,
   Sparkles,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 interface NavbarProps {
@@ -16,6 +18,9 @@ interface NavbarProps {
   isSyncing: boolean;
   onSeedDemo: () => void;
   activeAlertCount: number;
+  hasConnectedBroker?: boolean;
+  isMasked?: boolean;
+  onToggleMask?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -25,6 +30,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   isSyncing,
   onSeedDemo,
   activeAlertCount,
+  hasConnectedBroker = false,
+  isMasked = true,
+  onToggleMask,
 }) => {
   const tabs = [
     { id: "overview", label: "Dashboard", icon: LayoutDashboard },
@@ -91,14 +99,30 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Quick Actions */}
         <div className="flex items-center gap-2.5">
-          <button
-            onClick={onSeedDemo}
-            title="Load realistic demo holdings across Zerodha & Angel One"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-all"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Load Demo</span>
-          </button>
+          {hasConnectedBroker ? (
+            <button
+              type="button"
+              onClick={onToggleMask}
+              title={isMasked ? "Financial figures are masked (Click to reveal)" : "Financial figures are visible (Click to mask)"}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                isMasked
+                  ? "bg-amber-500/15 text-amber-300 border-amber-500/40 hover:bg-amber-500/25"
+                  : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-white"
+              }`}
+            >
+              {isMasked ? <EyeOff className="w-3.5 h-3.5 text-amber-400" /> : <Eye className="w-3.5 h-3.5 text-slate-400" />}
+              <span>{isMasked ? "Masked" : "Visible"}</span>
+            </button>
+          ) : (
+            <button
+              onClick={onSeedDemo}
+              title="Load realistic demo holdings across Zerodha & Angel One"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-all"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Load Demo</span>
+            </button>
+          )}
 
           <button
             onClick={onSync}

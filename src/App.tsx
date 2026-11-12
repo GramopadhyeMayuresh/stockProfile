@@ -42,6 +42,20 @@ export function App() {
   const [loading, setLoading] = useState(true);
   const [selectedStockForAlert, setSelectedStockForAlert] = useState<AggregatedHolding | null>(null);
 
+  // Privacy Masking (Default: true / Masked)
+  const [isMasked, setIsMasked] = useState<boolean>(() => {
+    const saved = localStorage.getItem("stockprofile_mask_amounts");
+    return saved !== null ? saved === "true" : true;
+  });
+
+  const toggleMask = () => {
+    setIsMasked((prev) => {
+      const next = !prev;
+      localStorage.setItem("stockprofile_mask_amounts", String(next));
+      return next;
+    });
+  };
+
   // Load all data
   const loadData = useCallback(async () => {
     try {
@@ -178,6 +192,7 @@ export function App() {
   };
 
   const activeAlertCount = alerts.filter((a) => a.status === "ACTIVE").length;
+  const hasConnectedBroker = Object.values(brokers).some((b) => b.is_connected);
 
   if (loading) {
     return (
@@ -228,16 +243,20 @@ export function App() {
         isSyncing={isSyncing}
         onSeedDemo={handleSeedDemo}
         activeAlertCount={activeAlertCount}
+        hasConnectedBroker={hasConnectedBroker}
+        isMasked={isMasked}
+        onToggleMask={toggleMask}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
         {/* TAB 1: DASHBOARD */}
         {currentTab === "overview" && (
           <div className="space-y-6">
-            <KPICards summary={summary} />
+            <KPICards summary={summary} isMasked={isMasked} />
             <HoldingsTable
               holdings={holdings}
               onOpenAlertModal={setSelectedStockForAlert}
+              isMasked={isMasked}
             />
           </div>
         )}
@@ -248,6 +267,7 @@ export function App() {
             <SectorAllocationView
               sectors={sectors}
               totalPortfolioValue={summary?.total_current_value || 0}
+              isMasked={isMasked}
             />
           </div>
         )}
@@ -265,7 +285,12 @@ export function App() {
 
         {/* TAB 5: BROKER SETTINGS */}
         {currentTab === "brokers" && (
-          <BrokerSettings brokers={brokers} onRefresh={loadData} />
+          <BrokerSettings
+            brokers={brokers}
+            onRefresh={loadData}
+            isMasked={isMasked}
+            onToggleMask={toggleMask}
+          />
         )}
       </main>
 

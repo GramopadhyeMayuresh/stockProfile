@@ -12,9 +12,10 @@ import {
 
 interface KPICardsProps {
   summary: PortfolioSummary | null;
+  isMasked?: boolean;
 }
 
-export const KPICards: React.FC<KPICardsProps> = ({ summary }) => {
+export const KPICards: React.FC<KPICardsProps> = ({ summary, isMasked = false }) => {
   if (!summary) return null;
 
   const isTotalProfit = summary.total_pnl >= 0;
@@ -34,7 +35,7 @@ export const KPICards: React.FC<KPICardsProps> = ({ summary }) => {
           </div>
         </div>
         <div className="text-2xl font-bold tracking-tight text-white">
-          {formatINR(summary.total_current_value)}
+          {formatINR(summary.total_current_value, isMasked)}
         </div>
         <div className="mt-2.5 flex items-center gap-1.5 text-xs font-medium">
           <span
@@ -44,7 +45,7 @@ export const KPICards: React.FC<KPICardsProps> = ({ summary }) => {
           >
             {isDayProfit ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
             {isDayProfit ? "+" : ""}
-            {formatINR(summary.day_pnl)} ({isDayProfit ? "+" : ""}
+            {formatINR(summary.day_pnl, isMasked)} ({isDayProfit ? "+" : ""}
             {summary.day_pnl_percent.toFixed(2)}%)
           </span>
           <span className="text-slate-500 text-[11px]">Today</span>
@@ -60,7 +61,7 @@ export const KPICards: React.FC<KPICardsProps> = ({ summary }) => {
           </div>
         </div>
         <div className="text-2xl font-bold tracking-tight text-white">
-          {formatINR(summary.total_invested)}
+          {formatINR(summary.total_invested, isMasked)}
         </div>
         <div className="mt-2.5 flex items-center gap-2 text-xs text-slate-400">
           <span className="font-semibold text-slate-200">{summary.stock_count}</span> stocks held across{" "}
@@ -88,7 +89,7 @@ export const KPICards: React.FC<KPICardsProps> = ({ summary }) => {
           }`}
         >
           {isTotalProfit ? "+" : ""}
-          {formatINR(summary.total_pnl)}
+          {formatINR(summary.total_pnl, isMasked)}
         </div>
         <div className="mt-2.5 flex items-center gap-1.5">
           <span
@@ -116,11 +117,11 @@ export const KPICards: React.FC<KPICardsProps> = ({ summary }) => {
           <>
             <div className="text-lg font-bold text-white flex items-center justify-between">
               <span>{topGainer.tradingsymbol}</span>
-              <span className="text-sm font-semibold text-slate-300">{formatINR(topGainer.last_price)}</span>
+              <span className="text-sm font-semibold text-slate-300">{formatINR(topGainer.last_price, isMasked)}</span>
             </div>
             <div className="mt-2 flex items-center justify-between text-xs font-semibold">
               <span className="text-emerald-400">+{topGainer.pnl_percent.toFixed(2)}%</span>
-              <span className="text-slate-400">+{formatINR(topGainer.pnl)}</span>
+              <span className="text-slate-400">+{formatINR(topGainer.pnl, isMasked)}</span>
             </div>
           </>
         ) : (
@@ -140,11 +141,11 @@ export const KPICards: React.FC<KPICardsProps> = ({ summary }) => {
           <>
             <div className="text-lg font-bold text-white flex items-center justify-between">
               <span>{topLoser.tradingsymbol}</span>
-              <span className="text-sm font-semibold text-slate-300">{formatINR(topLoser.last_price)}</span>
+              <span className="text-sm font-semibold text-slate-300">{formatINR(topLoser.last_price, isMasked)}</span>
             </div>
             <div className="mt-2 flex items-center justify-between text-xs font-semibold">
               <span className="text-rose-400">{topLoser.pnl_percent.toFixed(2)}%</span>
-              <span className="text-slate-400">{formatINR(topLoser.pnl)}</span>
+              <span className="text-slate-400">{formatINR(topLoser.pnl, isMasked)}</span>
             </div>
           </>
         ) : (

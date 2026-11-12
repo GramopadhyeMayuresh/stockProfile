@@ -1,6 +1,6 @@
 import React from "react";
 import { SectorAllocation } from "../types";
-import { formatINR } from "../api";
+import { formatINR, getSectorAbbr } from "../api";
 import {
   PieChart as RechartsPie,
   Pie,
@@ -13,6 +13,7 @@ import { PieChart, TrendingUp, TrendingDown, Layers } from "lucide-react";
 interface SectorAllocationViewProps {
   sectors: SectorAllocation[];
   totalPortfolioValue: number;
+  isMasked?: boolean;
 }
 
 const SECTOR_COLORS = [
@@ -33,6 +34,7 @@ const SECTOR_COLORS = [
 export const SectorAllocationView: React.FC<SectorAllocationViewProps> = ({
   sectors,
   totalPortfolioValue,
+  isMasked = false,
 }) => {
   const chartData = sectors.map((s) => ({
     name: s.sector,
@@ -82,9 +84,9 @@ export const SectorAllocationView: React.FC<SectorAllocationViewProps> = ({
                     const data = payload[0].payload;
                     return (
                       <div className="bg-slate-950/95 border border-slate-800 p-3 rounded-xl shadow-xl text-xs">
-                        <div className="font-bold text-white mb-1">{data.name}</div>
+                        <div className="font-bold text-white mb-1">{data.name} ({getSectorAbbr(data.name)})</div>
                         <div className="text-indigo-400 font-semibold">
-                          {formatINR(data.value)} ({data.weight.toFixed(1)}%)
+                          {formatINR(data.value, isMasked)} ({data.weight.toFixed(1)}%)
                         </div>
                       </div>
                     );
@@ -100,21 +102,25 @@ export const SectorAllocationView: React.FC<SectorAllocationViewProps> = ({
               Total Value
             </div>
             <div className="text-sm font-bold text-white">
-              {formatINR(totalPortfolioValue)}
+              {formatINR(totalPortfolioValue, isMasked)}
             </div>
           </div>
         </div>
 
         {/* Mini Legend */}
         <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-800">
-          {sectors.slice(0, 6).map((s, idx) => (
-            <div key={s.sector} className="flex items-center gap-1.5 text-[11px] text-slate-300">
+          {sectors.slice(0, 8).map((s, idx) => (
+            <div
+              key={s.sector}
+              title={`${s.sector}: ${s.weight_percent.toFixed(1)}%`}
+              className="flex items-center gap-1.5 text-[11px] text-slate-400 cursor-help"
+            >
               <span
-                className="w-2.5 h-2.5 rounded-full"
+                className="w-2 h-2 rounded-full shrink-0"
                 style={{ backgroundColor: SECTOR_COLORS[idx % SECTOR_COLORS.length] }}
               />
-              <span className="truncate max-w-[110px]">{s.sector}</span>
-              <span className="font-bold text-white">{s.weight_percent.toFixed(0)}%</span>
+              <span className="font-mono font-semibold text-slate-300">{getSectorAbbr(s.sector)}</span>
+              <span className="text-[10px] text-slate-500">({s.weight_percent.toFixed(0)}%)</span>
             </div>
           ))}
         </div>
@@ -147,9 +153,15 @@ export const SectorAllocationView: React.FC<SectorAllocationViewProps> = ({
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2.5">
                     <span
-                      className="w-3 h-3 rounded-md"
+                      className="w-3 h-3 rounded-md shrink-0"
                       style={{ backgroundColor: color }}
                     />
+                    <span
+                      title={`Full Name: ${s.sector}`}
+                      className="px-1.5 py-0.5 rounded font-mono font-bold text-[10px] bg-slate-800 text-slate-300 cursor-help border border-slate-700"
+                    >
+                      {getSectorAbbr(s.sector)}
+                    </span>
                     <span className="font-bold text-sm text-white">{s.sector}</span>
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-medium">
                       {s.stock_count} {s.stock_count === 1 ? "stock" : "stocks"}
@@ -158,7 +170,7 @@ export const SectorAllocationView: React.FC<SectorAllocationViewProps> = ({
 
                   <div className="text-right">
                     <span className="font-bold text-sm text-white">
-                      {formatINR(s.current_value)}
+                      {formatINR(s.current_value, isMasked)}
                     </span>
                     <span className="ml-2 font-bold text-xs text-indigo-400">
                       ({s.weight_percent.toFixed(1)}%)
@@ -179,7 +191,7 @@ export const SectorAllocationView: React.FC<SectorAllocationViewProps> = ({
 
                 {/* Sector Stats footer */}
                 <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
-                  <span>Invested: {formatINR(s.invested_value)}</span>
+                  <span>Invested: {formatINR(s.invested_value, isMasked)}</span>
                   <div className="flex items-center gap-1 font-semibold">
                     <span>Return:</span>
                     <span
@@ -189,7 +201,7 @@ export const SectorAllocationView: React.FC<SectorAllocationViewProps> = ({
                     >
                       {isProfit ? <TrendingUp className="w-3 h-3 mr-0.5" /> : <TrendingDown className="w-3 h-3 mr-0.5" />}
                       {isProfit ? "+" : ""}
-                      {formatINR(s.pnl)} ({isProfit ? "+" : ""}
+                      {formatINR(s.pnl, isMasked)} ({isProfit ? "+" : ""}
                       {s.pnl_percent.toFixed(2)}%)
                     </span>
                   </div>
