@@ -33,6 +33,7 @@ export const HoldingsTable: React.FC<HoldingsTableProps> = ({
   const [selectedSector, setSelectedSector] = useState("ALL");
   const [sortField, setSortField] = useState<SortField>("current_value");
   const [sortAsc, setSortAsc] = useState(false);
+  const [pnlViewMode, setPnlViewMode] = useState<"overall" | "daily">("overall");
 
   const sectors = useMemo(() => {
     const set = new Set<string>();
@@ -52,8 +53,18 @@ export const HoldingsTable: React.FC<HoldingsTableProps> = ({
         return matchesSearch && matchesSector;
       })
       .sort((a, b) => {
-        let valA = a[sortField];
-        let valB = b[sortField];
+        let valA: number | string = a[sortField];
+        let valB: number | string = b[sortField];
+
+        // Dynamic P&L values if daily mode is active
+        if (sortField === "pnl" && pnlViewMode === "daily") {
+          valA = a.total_quantity * a.day_change;
+          valB = b.total_quantity * b.day_change;
+        } else if (sortField === "pnl_percent" && pnlViewMode === "daily") {
+          valA = a.day_change_percent;
+          valB = b.day_change_percent;
+        }
+
         if (typeof valA === "string") {
           return sortAsc
             ? (valA as string).localeCompare(valB as string)
@@ -61,7 +72,7 @@ export const HoldingsTable: React.FC<HoldingsTableProps> = ({
         }
         return sortAsc ? (valA as number) - (valB as number) : (valB as number) - (valA as number);
       });
-  }, [holdings, search, selectedSector, sortField, sortAsc]);
+  }, [holdings, search, selectedSector, sortField, sortAsc, pnlViewMode]);
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
@@ -86,9 +97,35 @@ export const HoldingsTable: React.FC<HoldingsTableProps> = ({
           </span>
         </div>
 
-        <div className="flex items-center gap-2.5 w-full md:w-auto">
+        <div className="flex items-center flex-wrap gap-2.5 w-full md:w-auto">
+          {/* P&L View Toggle: Overall vs Daily */}
+          <div className="flex items-center bg-slate-950/90 border border-slate-800 rounded-xl p-0.5 text-xs font-semibold shadow-inner">
+            <button
+              type="button"
+              onClick={() => setPnlViewMode("overall")}
+              className={`px-3 py-1 rounded-lg transition-all ${
+                pnlViewMode === "overall"
+                  ? "bg-indigo-600 text-white shadow-sm"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              Overall P&L
+            </button>
+            <button
+              type="button"
+              onClick={() => setPnlViewMode("daily")}
+              className={`px-3 py-1 rounded-lg transition-all ${
+                pnlViewMode === "daily"
+                  ? "bg-indigo-600 text-white shadow-sm"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              Daily P&L
+            </button>
+          </div>
+
           {/* Search */}
-          <div className="relative flex-1 md:w-64">
+          <div className="relative flex-1 md:w-60">
             <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
             <input
               type="text"
@@ -146,7 +183,7 @@ export const HoldingsTable: React.FC<HoldingsTableProps> = ({
                 className="py-3 px-4 text-right cursor-pointer hover:text-white transition-colors"
               >
                 <div className="flex items-center justify-end gap-1">
-                  <span>Total P&L</span>
+                  <span>{pnlViewMode === "overall" ? "Overall P&L" : "Daily P&L"}</span>
                   <ArrowUpDown className="w-3 h-3" />
                 </div>
               </th>
@@ -164,7 +201,6 @@ export const HoldingsTable: React.FC<HoldingsTableProps> = ({
           </thead>
           <tbody className="divide-y divide-slate-800/50 text-xs">
             {filtered.map((stock) => {
-              const isProfit = stock.pnl >= 0;
               const isDayUp = stock.day_change >= 0;
               const hasBothBrokers = stock.brokers.length > 1;
 
@@ -239,6 +275,7 @@ export const HoldingsTable: React.FC<HoldingsTableProps> = ({
                   {/* Qty & Avg Price */}
                   <td className="py-3 px-3 text-right">
                     <div className="font-semibold text-white">
+                      <span className="text-[11px] font-normal text-slate-400 mr-1">Qty:</span>
                       {stock.total_quantity.toLocaleString()}
                     </div>
                     <div className="text-[11px] text-slate-400">
@@ -246,10 +283,10 @@ export const HoldingsTable: React.FC<HoldingsTableProps> = ({
                     </div>
                   </td>
 
-                  {/* LTP */}
+                  {/* LTP (Always visible even when masked) */}
                   <td className="py-3 px-3 text-right">
                     <div className="font-semibold text-white">
-                      {formatINR(stock.last_price, isMasked)}
+                      {formatINR(stock.last_price)}
                     </div>
                     <div
                       className={`flex items-center justify-end text-[11px] font-semibold ${
@@ -272,24 +309,40 @@ export const HoldingsTable: React.FC<HoldingsTableProps> = ({
                     </div>
                   </td>
 
-                  {/* P&L */}
+                  {/* P&L (Dynamic Overall vs Daily) */}
                   <td className="py-3 px-4 text-right">
-                    <div
-                      className={`font-bold ${
-                        isProfit ? "text-emerald-400" : "text-rose-400"
-                      }`}
-                    >
-                      {isProfit ? "+" : ""}
-                      {formatINR(stock.pnl, isMasked)}
-                    </div>
-                    <div
-                      className={`text-[11px] font-semibold ${
-                        isProfit ? "text-emerald-400" : "text-rose-400"
-                      }`}
-                    >
-                      {isProfit ? "+" : ""}
-                      {stock.pnl_percent.toFixed(2)}%
-                    </div>
+                    {(() => {
+                      const isDaily = pnlViewMode === "daily";
+                      const pnlVal = isDaily ? (stock.total_quantity * stock.day_change) : stock.pnl;
+                      const pnlPct = isDaily ? stock.day_change_percent : stock.pnl_percent;
+                      const isPnlPositive = pnlVal >= 0;
+
+                      return (
+                        <>
+                          <div
+                            className={`font-bold ${
+                              isPnlPositive ? "text-emerald-400" : "text-rose-400"
+                            }`}
+                          >
+                            {isPnlPositive ? "+" : ""}
+                            {formatINR(pnlVal, isMasked)}
+                          </div>
+                          <div
+                            className={`text-[11px] font-semibold flex items-center justify-end gap-1 ${
+                              isPnlPositive ? "text-emerald-400" : "text-rose-400"
+                            }`}
+                          >
+                            <span>
+                              {isPnlPositive ? "+" : ""}
+                              {pnlPct.toFixed(2)}%
+                            </span>
+                            <span className="text-[9px] font-mono uppercase px-1 py-0.2 rounded bg-slate-800 text-slate-400 border border-slate-700/60">
+                              {isDaily ? "Day" : "Total"}
+                            </span>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </td>
 
                   {/* Portfolio Weight */}

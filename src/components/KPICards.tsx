@@ -117,7 +117,7 @@ export const KPICards: React.FC<KPICardsProps> = ({ summary, isMasked = false })
           <>
             <div className="text-lg font-bold text-white flex items-center justify-between">
               <span>{topGainer.tradingsymbol}</span>
-              <span className="text-sm font-semibold text-slate-300">{formatINR(topGainer.last_price, isMasked)}</span>
+              <span className="text-sm font-semibold text-slate-300">{formatINR(topGainer.last_price)}</span>
             </div>
             <div className="mt-2 flex items-center justify-between text-xs font-semibold">
               <span className="text-emerald-400">+{topGainer.pnl_percent.toFixed(2)}%</span>
@@ -141,7 +141,7 @@ export const KPICards: React.FC<KPICardsProps> = ({ summary, isMasked = false })
           <>
             <div className="text-lg font-bold text-white flex items-center justify-between">
               <span>{topLoser.tradingsymbol}</span>
-              <span className="text-sm font-semibold text-slate-300">{formatINR(topLoser.last_price, isMasked)}</span>
+              <span className="text-sm font-semibold text-slate-300">{formatINR(topLoser.last_price)}</span>
             </div>
             <div className="mt-2 flex items-center justify-between text-xs font-semibold">
               <span className="text-rose-400">{topLoser.pnl_percent.toFixed(2)}%</span>
