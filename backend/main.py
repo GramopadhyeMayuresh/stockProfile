@@ -1,5 +1,8 @@
 from contextlib import asynccontextmanager
 import asyncio
+import csv
+import io
+from datetime import date
 from typing import Dict, Any, List, Optional
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -98,6 +101,98 @@ async def get_sectors():
     holdings = await get_all_holdings()
     _, sectors, _ = await aggregate_holdings(holdings)
     return sectors
+
+
+@app.get("/api/portfolio/export/csv")
+async def export_portfolio_csv():
+    """
+    Export current aggregated holdings as a UTF-8 BOM CSV file suitable for Excel/Numbers/CA reporting.
+    """
+    holdings = await get_all_holdings()
+    agg, _, _ = await aggregate_holdings(holdings)
+
+    output = io.StringIO()
+    # Write UTF-8 BOM for Excel
+    output.write("\ufeff")
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "Trading Symbol", "Company Name", "ISIN", "Exchange", "Sector",
+        "Brokers", "Zerodha Qty", "Angel One Qty", "Total Quantity",
+        "Weighted Avg Price (INR)", "LTP (INR)", "Invested Value (INR)",
+        "Current Value (INR)", "Unrealized P&L (INR)", "Return (%)",
+        "Today P&L (INR)", "Today Change (%)", "Portfolio Weight (%)"
+    ])
+
+    total_invested = 0.0
+    total_current = 0.0
+    total_qty = 0
+    total_z_qty = 0
+    total_a_qty = 0
+    total_day_pnl = 0.0
+
+    for h in agg:
+        z_qty = h.broker_quantities.get("zerodha", 0)
+        a_qty = h.broker_quantities.get("angelone", 0)
+        broker_str = " + ".join(["Zerodha" if b == "zerodha" else "Angel One" for b in h.brokers])
+        day_pnl = round(h.total_quantity * h.day_change, 2)
+
+        total_invested += h.invested_value
+        total_current += h.current_value
+        total_qty += h.total_quantity
+        total_z_qty += z_qty
+        total_a_qty += a_qty
+        total_day_pnl += day_pnl
+
+        writer.writerow([
+            h.tradingsymbol,
+            h.company_name or h.tradingsymbol,
+            h.isin,
+            h.exchange,
+            h.sector,
+            broker_str,
+            z_qty,
+            a_qty,
+            h.total_quantity,
+            f"{h.average_price:.2f}",
+            f"{h.last_price:.2f}",
+            f"{h.invested_value:.2f}",
+            f"{h.current_value:.2f}",
+            f"{h.pnl:.2f}",
+            f"{h.pnl_percent:.2f}%",
+            f"{day_pnl:.2f}",
+            f"{h.day_change_percent:.2f}%",
+            f"{h.weight_percent:.2f}%"
+        ])
+
+    total_pnl = total_current - total_invested
+    total_pnl_pct = (total_pnl / total_invested * 100) if total_invested > 0 else 0.0
+
+    writer.writerow([])
+    writer.writerow([
+        "TOTAL", "", "", "", "",
+        "", total_z_qty, total_a_qty, total_qty,
+        "", "",
+        f"{total_invested:.2f}",
+        f"{total_current:.2f}",
+        f"{total_pnl:.2f}",
+        f"{total_pnl_pct:.2f}%",
+        f"{total_day_pnl:.2f}",
+        "",
+        "100.00%"
+    ])
+
+    csv_bytes = output.getvalue().encode("utf-8")
+    today_str = date.today().isoformat()
+    filename = f"StockProfile_Portfolio_{today_str}.csv"
+
+    return Response(
+        content=csv_bytes,
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"'
+        }
+    )
 
 
 @app.post("/api/portfolio/sync")
