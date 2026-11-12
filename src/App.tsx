@@ -229,7 +229,7 @@ export function App() {
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
-        {/* TAB 1: OVERVIEW */}
+        {/* TAB 1: DASHBOARD */}
         {currentTab === "overview" && (
           <div className="space-y-6">
             <KPICards summary={summary} />
@@ -240,18 +240,7 @@ export function App() {
           </div>
         )}
 
-        {/* TAB 2: HOLDINGS & WEIGHTS */}
-        {currentTab === "holdings" && (
-          <div className="space-y-6">
-            <KPICards summary={summary} />
-            <HoldingsTable
-              holdings={holdings}
-              onOpenAlertModal={setSelectedStockForAlert}
-            />
-          </div>
-        )}
-
-        {/* TAB 3: SECTOR ALLOCATION */}
+        {/* TAB 2: SECTOR ALLOCATION */}
         {currentTab === "sectors" && (
           <div className="space-y-6">
             <SectorAllocationView
